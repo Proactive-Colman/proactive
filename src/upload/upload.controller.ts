@@ -31,11 +31,7 @@ export class UploadController {
     @Body('name') name: string,
     @Body('description') description: string,
   ) {
-    const uniqueId = file.filename.split('.')[0]; // Get the unique ID from filename
-    
-    // Create a new test with the file's unique ID
     const test = await this.testService.create({
-      id: uniqueId,
       name,
       description,
     });

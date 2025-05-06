@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Test } from './test.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class TestService {
@@ -11,7 +12,10 @@ export class TestService {
   ) {}
 
   async create(test: Partial<Test>): Promise<Test> {
-    const newTest = this.testRepository.create(test);
+    const newTest = this.testRepository.create({
+      ...test,
+      id: uuidv4(),
+    });
     return this.testRepository.save(newTest);
   }
 
