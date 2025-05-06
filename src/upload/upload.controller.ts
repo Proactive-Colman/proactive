@@ -4,6 +4,8 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { UploadService } from './upload.service';
 import { TestService } from '../test/test.service';
+import { v4 as uuidv4 } from 'uuid';
+import { log } from 'console';
 
 @Controller('upload')
 export class UploadController {
@@ -18,9 +20,9 @@ export class UploadController {
       storage: diskStorage({
         destination: './uploads',
         filename: (req, file, callback) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueId = uuidv4();
           const ext = extname(file.originalname);
-          const filename = `${uniqueSuffix}${ext}`;
+          const filename = `${uniqueId}${ext}`;
           callback(null, filename);
         },
       }),
@@ -31,10 +33,11 @@ export class UploadController {
     @Body('name') name: string,
     @Body('description') description: string,
   ) {
+    const uniqueId = file.filename; 
     const test = await this.testService.create({
       name,
       description,
-    });
+    }, uniqueId);
 
     return {
       test,

@@ -11,10 +11,10 @@ export class TestService {
     private testRepository: Repository<Test>,
   ) {}
 
-  async create(test: Partial<Test>): Promise<Test> {
+  async create(test: Partial<Test>, id?: string): Promise<Test> {
     const newTest = this.testRepository.create({
       ...test,
-      id: uuidv4(),
+      id: id || uuidv4(),
     });
     return this.testRepository.save(newTest);
   }
