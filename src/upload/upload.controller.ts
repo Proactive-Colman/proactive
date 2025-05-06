@@ -1,12 +1,16 @@
-import { Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, UploadedFile, UseInterceptors, Body } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { UploadService } from './upload.service';
+import { TestService } from '../test/test.service';
 
 @Controller('upload')
 export class UploadController {
-  constructor(private readonly uploadService: UploadService) {}
+  constructor(
+    private readonly uploadService: UploadService,
+    private readonly testService: TestService,
+  ) {}
 
   @Post()
   @UseInterceptors(
@@ -22,10 +26,26 @@ export class UploadController {
       }),
     }),
   )
-  async uploadFile(@UploadedFile() file: any) {
+  async uploadFile(
+    @UploadedFile() file: any,
+    @Body('name') name: string,
+    @Body('description') description: string,
+  ) {
+    const uniqueId = file.filename.split('.')[0]; // Get the unique ID from filename
+    
+    // Create a new test with the file's unique ID
+    const test = await this.testService.create({
+      id: uniqueId,
+      name,
+      description,
+    });
+
     return {
-      filename: file.filename,
-      path: `/uploads/${file.filename}`,
+      test,
+      file: {
+        filename: file.filename,
+        path: `/uploads/${file.filename}`,
+      },
     };
   }
 } 

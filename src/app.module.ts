@@ -13,7 +13,7 @@ import { UploadModule } from './upload/upload.module';
       password: process.env.DATABASE_PASSWORD || 'postgres',
       database: process.env.DATABASE_NAME || 'postgres',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // Set to false in production
+      synchronize: false, // Disabled for manual table handling
     }),
     TestModule,
     UploadModule,

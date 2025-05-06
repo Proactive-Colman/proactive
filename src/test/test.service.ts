@@ -18,7 +18,8 @@ export class TestService {
   async findAll(): Promise<Test[]> {
     return this.testRepository.find();
   }
-  async findOne(id: number): Promise<Test> {
+
+  async findOne(id: string): Promise<Test> {
     const test = await this.testRepository.findOne({ where: { id } });
     if (!test) {
       throw new NotFoundException(`Test with ID ${id} not found`);
@@ -26,7 +27,7 @@ export class TestService {
     return test;
   }
 
-  async update(id: number, test: Partial<Test>): Promise<Test> {
+  async update(id: string, test: Partial<Test>): Promise<Test> {
     const existingTest = await this.findOne(id);
     await this.testRepository.update(id, test);
     const updatedTest = await this.testRepository.findOne({ where: { id } });
@@ -36,7 +37,7 @@ export class TestService {
     return updatedTest;
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await this.testRepository.delete(id);
   }
 } 

@@ -18,16 +18,16 @@ export class TestController {
 
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Test> {
-    return this.testService.findOne(+id);
+    return this.testService.findOne(id);
   }
 
   @Put(':id')
   update(@Param('id') id: string, @Body() test: Partial<Test>): Promise<Test> {
-    return this.testService.update(+id, test);
+    return this.testService.update(id, test);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
-    return this.testService.remove(+id);
+    return this.testService.remove(id);
   }
 } 
