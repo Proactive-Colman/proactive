@@ -1,20 +1,63 @@
-import { Controller, Post, UploadedFile, UseInterceptors, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+  Body,
+  BadRequestException,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { UploadService } from './upload.service';
 import { TestService } from '../test/test.service';
 import { v4 as uuidv4 } from 'uuid';
-import { log } from 'console';
+import { ApiConsumes, ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UploadFileDto } from './dto/upload-file.dto';
+import { UploadResponseDto } from './dto/upload-response.dto';
+import { ConfigService } from '@nestjs/config';
+import { Test } from '../test/entities/test.entity';
 
+@ApiTags('Upload')
 @Controller('upload')
 export class UploadController {
   constructor(
     private readonly uploadService: UploadService,
     private readonly testService: TestService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+        name: {
+          type: 'string',
+        },
+        description: {
+          type: 'string',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'File uploaded successfully',
+    type: UploadResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid file or request data',
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -29,22 +72,42 @@ export class UploadController {
     }),
   )
   async uploadFile(
-    @UploadedFile() file: any,
-    @Body('name') name: string,
-    @Body('description') description: string,
-  ) {
-    const uniqueId = file.filename; 
-    const test = await this.testService.create({
-      name,
-      description,
-    }, uniqueId);
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 5 * 1024 * 1024, // 5MB
+          }),
+          new FileTypeValidator({
+            fileType: /(jpg|jpeg|png|pdf)$/,
+          }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+    @Body() uploadFileDto: UploadFileDto,
+  ): Promise<UploadResponseDto> {
+    try {
+      const test = (await this.testService.create(
+        {
+          name: uploadFileDto.name,
+          description: uploadFileDto.description,
+        },
+        file.filename,
+      )) as Test;
 
-    return {
-      test,
-      file: {
-        filename: file.filename,
-        path: `/uploads/${file.filename}`,
-      },
-    };
+      return {
+        test,
+        file: {
+          filename: file.filename,
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          path: `/uploads/${file.filename}`,
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException('Failed to upload file: ' + error.message);
+    }
   }
-} 
+}
