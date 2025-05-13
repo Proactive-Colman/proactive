@@ -1,24 +1,76 @@
-services:
-  server:
-    build: .
-    container_name: proactive_server
-    ports:
-      - '3000:3000'
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/test_db
-    depends_on:
-      - postgres
+version: "3.8"
 
-  postgres:
-    image: postgres:15.3-alpine
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://backend:3000
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: proactive_backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_NAME=proactive
+      - JWT_SECRET=your-secret-key
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/uploads:/app/uploads
+
+  executor:
+    build:
+      context: ./executor
+      dockerfile: Dockerfile
+    container_name: proactive_executor
+    ports:
+      - "8000:8000"
+    environment:
+      - BACKEND_URL=http://backend:3000
+    depends_on:
+      - backend
+
+  timer:
+    build:
+      context: ./timer
+      dockerfile: Dockerfile
+    container_name: proactive_timer
+    environment:
+      - NODE_ENV=development
+      - BACKEND_URL=http://backend:3000
+      - EXECUTOR_URL=http://executor:8000
+      - EXECUTION_INTERVAL_MINUTES=5
+    depends_on:
+      - backend
+      - executor
+
+  db:
+    image: postgres:15-alpine
     platform: linux/amd64
     container_name: test_postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: test_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=proactive
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
