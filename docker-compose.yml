@@ -28,8 +28,11 @@ services:
       - DATABASE_PASSWORD=postgres
       - DATABASE_NAME=proactive
       - JWT_SECRET=your-secret-key
+      - MONGODB_URI=mongodb://mongodb:27017/proactive
+      - OPENAI_API_KEY=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
     depends_on:
       - db
+      - mongodb
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -40,26 +43,24 @@ services:
       context: ./executor
       dockerfile: Dockerfile
     container_name: proactive_executor
-    ports:
-      - "8000:8000"
     environment:
       - BACKEND_URL=http://backend:3000
     depends_on:
       - backend
 
-  timer:
-    build:
-      context: ./timer
-      dockerfile: Dockerfile
-    container_name: proactive_timer
-    environment:
-      - NODE_ENV=development
-      - BACKEND_URL=http://backend:3000
-      - EXECUTOR_URL=http://executor:8000
-      - EXECUTION_INTERVAL_MINUTES=5
-    depends_on:
-      - backend
-      - executor
+  # timer:
+  #   build:
+  #     context: ./timer
+  #     dockerfile: Dockerfile
+  #   container_name: proactive_timer
+  #   environment:
+  #     - NODE_ENV=development
+  #     - BACKEND_URL=http://backend:3000
+  #     - EXECUTOR_URL=http://executor:8000
+  #     - EXECUTION_INTERVAL_MINUTES=5
+  #   depends_on:
+  #     - backend
+  #     - executor
 
   db:
     image: postgres:15-alpine
@@ -74,6 +75,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
 volumes:
   postgres_data:
+  mongodb_data:
 # docker run --platform=linux/amd64 --name test-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:15.3-alpine
