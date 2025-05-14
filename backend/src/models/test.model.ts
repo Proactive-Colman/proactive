@@ -3,9 +3,13 @@ import { Document } from 'mongoose';
 
 export type TestDocument = Test & Document;
 
-interface Step {
+@Schema({ _id: false })
+class Step {
+  @Prop({ required: true })
   name: string;
-  command: string;
+
+  @Prop({ type: [String], required: true })
+  commands: string[];
 }
 
 @Schema({ timestamps: true })
@@ -19,7 +23,7 @@ export class Test {
   @Prop({ required: true })
   startUrl: string;
 
-  @Prop({ type: [{ name: String, command: String }], required: true })
+  @Prop({ type: [Step], required: true })
   steps: Step[];
 }
 

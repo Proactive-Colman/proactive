@@ -43,6 +43,8 @@ services:
       context: ./executor
       dockerfile: Dockerfile
     container_name: proactive_executor
+    ports:
+      - "8000:8000"
     environment:
       - BACKEND_URL=http://backend:3000
     depends_on:
@@ -81,6 +83,22 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    command: mongod --wiredTigerCacheSizeGB 1 --setParameter diagnosticDataCollectionEnabled=false
+    environment:
+      - MONGO_INITDB_DATABASE=proactive
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 64000
+        hard: 64000
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
 volumes:
   postgres_data:

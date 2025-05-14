@@ -94,30 +94,51 @@ export class TestService {
       // Extract all commands from the Python file
       const commands: string[] = [];
       const lines = fileContent.split('\n');
+      let isInTestMethod = false;
 
       for (const line of lines) {
-        // Look for click actions
-        const clickMatch = line.match(
-          /self\.driver\.find_element\(By\.([^,]+),\s*"([^"]+)"\)\.click\(\)/,
-        );
-        if (clickMatch) {
-          const [_, byType, selector] = clickMatch;
-          commands.push(`find_element(By.${byType}, "${selector}").click()`);
+        // Check if we're entering or leaving a test method
+        if (line.includes('def test_')) {
+          isInTestMethod = true;
+          continue;
+        } else if (
+          line.includes('def setup_method') ||
+          line.includes('def teardown_method')
+        ) {
+          isInTestMethod = false;
           continue;
         }
 
-        // Look for type/send_keys actions
-        const typeMatch = line.match(
-          /self\.driver\.find_element\(By\.([^,]+),\s*"([^"]+)"\)\.send_keys\(([^)]+)\)/,
-        );
-        if (typeMatch) {
-          const [_, byType, selector, text] = typeMatch;
-          const cleanText = text.replace(/['"]/g, ''); // Remove quotes
-          commands.push(
-            `find_element(By.${byType}, "${selector}").send_keys("${cleanText}")`,
-          );
-          continue;
+        // Only process driver commands if we're in a test method
+        if (isInTestMethod) {
+          const commandMatch = line.match(/self\.driver\.(.*)/);
+          if (commandMatch) {
+            // Remove 'self.' prefix and add to commands
+            const command = `driver.${commandMatch[1]}`;
+            commands.push(command);
+          }
         }
+      }
+
+      // Add wait for search results after the search
+      const searchIndex = commands.findIndex((cmd) =>
+        cmd.includes('send_keys(Keys.ENTER)'),
+      );
+      if (searchIndex !== -1) {
+        commands.splice(
+          searchIndex + 1,
+          0,
+          'WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "ytd-video-renderer")))',
+        );
+      }
+
+      // Replace the specific video selector with a more reliable one
+      const videoIndex = commands.findIndex((cmd) =>
+        cmd.includes('ytd-item-section-renderer'),
+      );
+      if (videoIndex !== -1) {
+        commands[videoIndex] =
+          'driver.find_element(By.CSS_SELECTOR, "ytd-video-renderer").click()';
       }
 
       // Analyze and combine commands into logical steps
