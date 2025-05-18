@@ -47,22 +47,40 @@ services:
       - "8000:8000"
     environment:
       - BACKEND_URL=http://backend:3000
+      - RESULTS_URL=http://results:3001
     depends_on:
       - backend
+      - results
 
-  # timer:
-  #   build:
-  #     context: ./timer
-  #     dockerfile: Dockerfile
-  #   container_name: proactive_timer
-  #   environment:
-  #     - NODE_ENV=development
-  #     - BACKEND_URL=http://backend:3000
-  #     - EXECUTOR_URL=http://executor:8000
-  #     - EXECUTION_INTERVAL_MINUTES=5
-  #   depends_on:
-  #     - backend
-  #     - executor
+  results:
+    build:
+      context: ./results
+      dockerfile: Dockerfile
+    container_name: proactive_results
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongodb:27017/proactive
+    depends_on:
+      - mongodb
+    volumes:
+      - ./results:/app
+      - /app/node_modules
+
+  timer:
+    build:
+      context: ./timer
+      dockerfile: Dockerfile
+    container_name: proactive_timer
+    environment:
+      - NODE_ENV=development
+      - BACKEND_URL=http://backend:3000
+      - EXECUTOR_URL=http://executor:8000
+      - EXECUTION_INTERVAL_MINUTES=15
+    depends_on:
+      - backend
+      - executor
 
   db:
     image: postgres:15-alpine

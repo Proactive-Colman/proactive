@@ -53,9 +53,7 @@ export class TestService {
   async executeTest(testId: string): Promise<void> {
     try {
       const executorUrl = this.configService.get<string>("executor.url");
-      await this.retry(() =>
-        axios.post(`${executorUrl}/execute`, { test_id: testId })
-      );
+      await this.retry(() => axios.post(`${executorUrl}/execute/${testId}`));
       this.logger.log(`Successfully executed test: ${testId}`);
     } catch (error) {
       if (error instanceof AxiosError) {
@@ -77,11 +75,17 @@ export class TestService {
       this.logger.log(`Found ${tests.length} tests to execute`);
 
       for (const test of tests) {
+        if (!test._id) {
+          this.logger.warn(
+            `Test ID is undefined for test: ${JSON.stringify(test)}`
+          );
+          continue;
+        }
         try {
-          await this.executeTest(test.id);
+          await this.executeTest(test._id);
         } catch (error) {
           this.logger.error(
-            `Failed to execute test ${test.id}: ${error.message}`
+            `Failed to execute test ${test._id}: ${error.message}`
           );
           // Continue with next test even if one fails
           continue;

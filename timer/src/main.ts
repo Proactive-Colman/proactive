@@ -10,11 +10,9 @@ async function bootstrap() {
       logger: ["error", "warn", "log", "debug", "verbose"],
     });
 
-    const configService = app.get(ConfigService);
-    const port = configService.get<number>("port") || 3001;
-
-    await app.listen(port);
-    logger.log(`Timer service is running on port ${port}`);
+    // Initialize the app without listening on a port
+    await app.init();
+    logger.log("Timer service initialized successfully");
   } catch (error) {
     logger.error(`Failed to start timer service: ${error.message}`);
     process.exit(1);

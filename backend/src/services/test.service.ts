@@ -28,28 +28,53 @@ export class TestService {
           {
             role: 'system',
             content: `You are a helpful assistant that analyzes sequences of Selenium commands and combines them into logical steps.
-            For each step, provide:
-            1. A clear, concise name describing the action
-            2. The list of commands that make up this step
-            
-            Example input:
-            [
-              "find_element(By.NAME, 'search_query').click()",
-              "find_element(By.NAME, 'search_query').send_keys('nba')",
-              "find_element(By.NAME, 'search_query').send_keys('Keys.ENTER')"
-            ]
-            
-            Example output:
-            [
-              {
-                "name": "Search for 'nba'",
-                "commands": [
-                  "find_element(By.NAME, 'search_query').click()",
-                  "find_element(By.NAME, 'search_query').send_keys('nba')",
-                  "find_element(By.NAME, 'search_query').send_keys('Keys.ENTER')"
-                ]
-              }
-            ]`,
+For each step, provide:
+1. A clear, concise name describing the action
+2. The list of commands that make up this step
+
+- Group all initialization commands (like driver.get, driver.set_window_size) into an "Initialization" step.
+- Group all cleanup commands (like driver.close, driver.quit) into a "Cleanup" or "Teardown" step.
+- Group the main test actions into logical steps.
+
+Example input:
+[
+  "driver.get('https://www.youtube.com/')",
+  "driver.set_window_size(974, 1032)",
+  "driver.find_element(By.NAME, 'search_query').click()",
+  "driver.find_element(By.NAME, 'search_query').send_keys('nba')",
+  "driver.find_element(By.NAME, 'search_query').send_keys(Keys.ENTER)",
+  "WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'ytd-video-renderer')))",
+  "driver.find_element(By.CSS_SELECTOR, 'ytd-video-renderer').click()",
+  "driver.close()"
+]
+
+Example output:
+[
+  {
+    "name": "Initialization",
+    "commands": [
+      "driver.get('https://www.youtube.com/')",
+      "driver.set_window_size(974, 1032)"
+    ]
+  },
+  {
+    "name": "Search for 'nba' and open first video",
+    "commands": [
+      "driver.find_element(By.NAME, 'search_query').click()",
+      "driver.find_element(By.NAME, 'search_query').send_keys('nba')",
+      "driver.find_element(By.NAME, 'search_query').send_keys(Keys.ENTER)",
+      "WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'ytd-video-renderer')))",
+      "driver.find_element(By.CSS_SELECTOR, 'ytd-video-renderer').click()"
+    ]
+  },
+  {
+    "name": "Cleanup",
+    "commands": [
+      "driver.close()"
+    ]
+  }
+]
+`,
           },
           {
             role: 'user',
@@ -192,5 +217,10 @@ export class TestService {
         { new: true },
       )
       .exec();
+  }
+
+  async deleteTest(id: string): Promise<boolean> {
+    const result = await this.testModel.findByIdAndDelete(id).exec();
+    return !!result;
   }
 }

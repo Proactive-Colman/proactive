@@ -1,8 +1,13 @@
 export interface Test {
-  id: string;
-  name: string;
-  description: string;
-  filename: string;
-  createdAt: Date;
-  updatedAt: Date;
+  _id: string;
+  startUrl: string;
+  steps: {
+    name: string;
+    commands: string[];
+  }[];
+  status?: string;
+  executionTime?: number;
+  error?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

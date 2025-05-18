@@ -73,6 +73,7 @@ async def get_openapi_endpoint():
     return app.openapi()
 
 BACKEND_URL = os.getenv('BACKEND_URL', 'http://backend:3000')
+RESULTS_URL = os.getenv('RESULTS_URL', 'http://results:3001')
 
 def setup_driver():
     options = webdriver.ChromeOptions()
@@ -198,27 +199,32 @@ async def test_execution_loop():
                         json={'status': 'running'}
                     )
                     
-                    # Execute test
+                    # Execute the test
                     result = execute_test(test)
                     
-                    # Update test status
-                    requests.put(
-                        f'{BACKEND_URL}/tests/{test["_id"]}/status',
+                    # Send result to results service
+                    requests.post(
+                        f'{RESULTS_URL}/test-results',
                         json=result
                     )
+                    
+                    # Update test status in backend
+                    requests.put(
+                        f'{BACKEND_URL}/tests/{test["_id"]}/status',
+                        json={'status': 'completed' if result['status'] == 'completed' else 'failed'}
+                    )
             
-            # Wait before next iteration
+            # Sleep for a bit before checking again
             await asyncio.sleep(5)
             
         except Exception as e:
-            print(f"Error in main loop: {e}")
+            print(f"Error in test execution loop: {str(e)}")
             await asyncio.sleep(5)
 
 @app.on_event("startup")
 async def startup_event():
     # Start the test execution loop in a separate thread
-    loop = asyncio.get_event_loop()
-    loop.create_task(test_execution_loop())
+    threading.Thread(target=lambda: asyncio.run(test_execution_loop()), daemon=True).start()
 
 @app.get("/health", 
     summary="Health Check",
@@ -247,22 +253,24 @@ async def execute_specific_test(test_id: str):
     try:
         # Get test from backend
         response = requests.get(f'{BACKEND_URL}/tests/{test_id}')
-        if response.status_code != 200:
+        if response.status_code == 404:
             raise HTTPException(status_code=404, detail="Test not found")
         
         test = response.json()
         
-        # Execute test
+        # Execute the test
         result = execute_test(test)
+        
+        # Send result to results service
+        requests.post(
+            f'{RESULTS_URL}/test-results',
+            json=result
+        )
         
         # Update test status in backend
         requests.put(
             f'{BACKEND_URL}/tests/{test_id}/status',
-            json={
-                'status': result['status'],
-                'executionTime': result['executionTime'],
-                'error': result.get('error')
-            }
+            json={'status': 'completed' if result['status'] == 'completed' else 'failed'}
         )
         
         return result
