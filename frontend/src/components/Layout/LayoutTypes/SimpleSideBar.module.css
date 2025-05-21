@@ -1,75 +1,80 @@
 .navbar {
-    height: 100vh;
-    width: rem(300px);
-    padding: var(--mantine-spacing-md);
-    display: flex;
-    flex-direction: column;
-    border-right: rem(1px) solid #22c55e;
-    background: #23272b;
+  height: 100vh;
+  width: rem(300px);
+  padding: var(--mantine-spacing-md);
+  display: flex;
+  flex-direction: column;
+  border-right: rem(1px) solid #22c55e;
+  background: #23272b;
 }
 .logo {
-    width: 9rem;
+  width: 9rem;
 }
 .navbarMain {
-    overflow-y: auto;
-    flex: 1;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .header {
-    display: flex;
-    justify-content: center;
-    padding-bottom: var(--mantine-spacing-md);
-    margin-bottom: calc(var(--mantine-spacing-md) * 1.5);
-    border-bottom: rem(1px) solid #22c55e;
+  display: flex;
+  justify-content: center;
+  padding-bottom: var(--mantine-spacing-md);
+  margin-bottom: calc(var(--mantine-spacing-md) * 1.5);
+  border-bottom: rem(1px) solid #22c55e;
 }
 
 .footer {
-    bottom: 20px;
-    padding-top: var(--mantine-spacing-md);
-    margin-top: var(--mantine-spacing-md);
-    border-top: rem(1px) solid #22c55e;
+  bottom: 20px;
+  padding-top: var(--mantine-spacing-md);
+  margin-top: var(--mantine-spacing-md);
+  border-top: rem(1px) solid #22c55e;
 }
 
 .icon {
-    margin-right: rem(10px);
+  margin-right: rem(10px);
 }
 
 .link {
-    margin-top: var(--mantine-spacing-xs);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-    font-size: var(--mantine-font-size-sm);
-    color: #fff;
-    padding: var(--mantine-spacing-sm) var(--mantine-spacing-sm);
-    border-radius: 6px;
-    font-weight: 500;
-    transition: background 0.2s, color 0.2s;
-    box-shadow: none;
+  margin-top: var(--mantine-spacing-xs);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  font-size: var(--mantine-font-size-sm);
+  color: #38d9a9;
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-sm);
+  border-radius: 999px;
+  font-weight: 700;
+  transition:
+    background 0.2s,
+    color 0.2s;
+  box-shadow: none;
+}
 
-    @mixin hover {
-        background-color: #22c55e;
-        color: #23272b;
-    }
-
-    &[data-active] {
-        &,
-        &:hover {
-            background-color: #22c55e;
-            color: #23272b;
-        }
-    }
+.link:hover {
+  background-color: #e6fcf5 !important;
+  color: #38d9a9 !important;
 }
 
 .linkIcon {
-    color: #22c55e;
-    margin-right: var(--mantine-spacing-sm);
-    width: rem(25px);
-    height: rem(25px);
+  color: #38d9a9;
+  margin-right: var(--mantine-spacing-sm);
+  width: rem(25px);
+  height: rem(25px);
+  transition: color 0.2s;
+}
+
+.link:hover .linkIcon {
+  color: #38d9a9;
+}
+
+.link[data-active],
+.link[data-active]:hover {
+  background-color: #22c55e;
+  color: #23272b;
 }
 
 .link[data-active] .linkIcon,
-.link:hover .linkIcon {
-    color: #23272b;
+.link[data-active]:hover .linkIcon {
+  color: #23272b;
 }

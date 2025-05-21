@@ -19,10 +19,6 @@ Thumbs.db
 .env
 .env.*
 
-# Docker
-*.local
-Dockerfile*
-docker-compose*.yml
 
 # Editor
 .vscode/

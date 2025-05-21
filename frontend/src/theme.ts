@@ -1,79 +1,91 @@
 import { createTheme } from '@mantine/core';
 
 export const theme = createTheme({
-  primaryColor: 'green',
-  primaryShade: 5,
+  primaryColor: 'teal',
   colors: {
-    green: [
-      '#e9fbe5',
-      '#c6f6c1',
-      '#8be78b',
-      '#4ade80',
-      '#22c55e', // flat accent green
-      '#16a34a',
-      '#15803d',
-      '#166534',
-      '#14532d',
-      '#052e16',
+    teal: [
+      '#e6fcf5',
+      '#c3fae8',
+      '#96f2d7',
+      '#63e6be',
+      '#38d9a9',
+      '#20c997',
+      '#12b886',
+      '#0ca678',
+      '#099268',
+      '#087f5b',
     ],
-    dark: [
-      '#23272b', // main background
-      '#2d3237', // card/panel background
-      '#343a40',
-      '#495057',
-      '#6c757d',
-      '#adb5bd',
-      '#ced4da',
-      '#dee2e6',
-      '#e9ecef',
+    green: [
+      '#ebfbee',
+      '#d3f9d8',
+      '#b2f2bb',
+      '#8ce99a',
+      '#69db7c',
+      '#51cf66',
+      '#40c057',
+      '#37b24d',
+      '#2f9e44',
+      '#2b8a3e',
+    ],
+    gray: [
       '#f8f9fa',
+      '#f1f3f5',
+      '#e9ecef',
+      '#dee2e6',
+      '#ced4da',
+      '#adb5bd',
+      '#868e96',
+      '#495057',
+      '#343a40',
+      '#212529',
     ],
   },
+  fontFamily: 'Inter, system-ui, Avenir, Helvetica, Arial, sans-serif',
   defaultRadius: 16,
-  fontFamily: 'Inter, sans-serif',
   components: {
-    Paper: {
+    Card: {
       defaultProps: {
-        radius: 16,
+        shadow: 'sm',
         withBorder: false,
-        shadow: undefined,
+        radius: 'md',
       },
       styles: {
         root: {
-          backgroundColor: '#2d3237',
-          boxShadow: 'none',
+          backgroundColor: '#fff',
+          color: '#222',
+          boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)',
         },
       },
     },
-    Card: {
+    Paper: {
+      defaultProps: {
+        shadow: 'sm',
+        withBorder: false,
+        radius: 'md',
+      },
       styles: {
         root: {
-          backgroundColor: '#2d3237',
-          borderRadius: 16,
-          boxShadow: 'none',
+          backgroundColor: '#fff',
+          color: '#222',
+          boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)',
         },
       },
     },
     Button: {
       defaultProps: {
-        radius: 10,
-        size: 'md',
+        radius: 'md',
+        color: 'teal',
       },
       styles: {
         root: {
-          background: '#22c55e',
-          color: '#23272b',
           fontWeight: 700,
-          boxShadow: 'none',
-          textShadow: 'none',
         },
       },
     },
     Title: {
       styles: {
         root: {
-          color: '#22c55e',
-          textShadow: 'none',
+          color: '#222',
           fontWeight: 800,
         },
       },
@@ -81,10 +93,16 @@ export const theme = createTheme({
     Text: {
       styles: {
         root: {
-          color: '#fff',
+          color: '#222',
+        },
+      },
+    },
+    Table: {
+      styles: {
+        root: {
+          color: '#222',
         },
       },
     },
   },
 });
-

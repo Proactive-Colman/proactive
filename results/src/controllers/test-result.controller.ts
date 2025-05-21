@@ -69,4 +69,11 @@ export class TestResultController {
   async getTestResultsStats(@Param("testId") testId: string) {
     return this.testResultService.getTestResultsStats(testId);
   }
+
+  @Get("by-test/:testId")
+  async getResultsByTestId(
+    @Param("testId") testId: string
+  ): Promise<TestResult[]> {
+    return this.testResultService.getTestResults(testId);
+  }
 }

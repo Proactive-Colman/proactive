@@ -22,17 +22,16 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      - DATABASE_HOST=db
+      - DATABASE_HOST=host.docker.internal
       - DATABASE_PORT=5432
       - DATABASE_USERNAME=postgres
-      - DATABASE_PASSWORD=postgres
+      - DATABASE_PASSWORD=bartar20@CS
       - DATABASE_NAME=proactive
       - JWT_SECRET=your-secret-key
-      - MONGODB_URI=mongodb://mongodb:27017/proactive
+      - MONGODB_URI=mongodb://admin:bartar20@CS@host.docker.internal:21771/proactive
       - OPENAI_API_KEY=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
-    depends_on:
-      - db
-      - mongodb
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -61,9 +60,9 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=development
-      - MONGODB_URI=mongodb://mongodb:27017/proactive
-    depends_on:
-      - mongodb
+      - MONGODB_URI=mongodb://admin:bartar20@CS@host.docker.internal:21771/proactive
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./results:/app
       - /app/node_modules
@@ -81,44 +80,3 @@ services:
     depends_on:
       - backend
       - executor
-
-  db:
-    image: postgres:15-alpine
-    platform: linux/amd64
-    container_name: test_postgres
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=proactive
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  mongodb:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    command: mongod --wiredTigerCacheSizeGB 1 --setParameter diagnosticDataCollectionEnabled=false
-    environment:
-      - MONGO_INITDB_DATABASE=proactive
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 64000
-        hard: 64000
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
-
-volumes:
-  postgres_data:
-  mongodb_data:
-# docker run --platform=linux/amd64 --name test-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:15.3-alpine

@@ -26,6 +26,7 @@ class PythonFileValidator extends FileValidator<Record<string, any>> {
       'text/x-python-script',
       'text/x-python',
       'application/x-python-code',
+      'application/octet-stream'
     ];
     const validExtensions = ['.py'];
 
@@ -104,7 +105,7 @@ export class UploadController {
     )
     file: Express.Multer.File,
     @Body() body: { name: string; description: string },
-  ): Promise<Test> {
+  ): Promise<Test | null> {
     try {
       if (!file) {
         throw new BadRequestException('No file provided');
@@ -130,9 +131,8 @@ export class UploadController {
 
       const pythonContent = file.buffer.toString('utf-8');
       const test = await this.testService.processPythonFile(pythonContent);
-      test.name = body.name;
-      test.description = body.description;
-      return test;
+      const updatedTest = await this.testService.updateTestNameAndDescription((test as any)._id, body.name, body.description);
+      return updatedTest;
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;

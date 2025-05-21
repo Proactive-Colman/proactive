@@ -1,13 +1,20 @@
-html, body {
-    margin: 0;
-    padding: 0;
-    font-size: 16px;
-    zoom: 1;
-    background: #111 !important;
-    color: #fff;
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-size: 16px;
+  zoom: 1;
+  background: #f8fafb !important;
+  color: #222;
 }
 
 body {
-  background: #111 !important;
-  color: #fff;
+  background: #f8fafb !important;
+  min-height: 100vh;
+  color: #222;
+}
+
+#root {
+  min-height: 100vh;
+  background: #f8fafb;
 }
