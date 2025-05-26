@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, Types } from "mongoose";
 
 export type TestResultDocument = TestResult & Document;
 
@@ -22,7 +22,7 @@ export const StepResultSchema = SchemaFactory.createForClass(StepResult);
 
 @Schema({ timestamps: true })
 export class TestResult {
-  @Prop({ type: Types.ObjectId, ref: 'Test', required: true })
+  @Prop({ type: Types.ObjectId, ref: "Test", required: true })
   testId: Types.ObjectId;
 
   @Prop({ required: true })
@@ -30,6 +30,9 @@ export class TestResult {
 
   @Prop({ required: true })
   executionTime: number;
+
+  @Prop({ required: true })
+  totalRuntime: number;
 
   @Prop({ type: [StepResultSchema], required: true })
   steps: StepResult[];
@@ -40,4 +43,4 @@ export class TestResult {
   environment: any;
 }
 
-export const TestResultSchema = SchemaFactory.createForClass(TestResult); 
+export const TestResultSchema = SchemaFactory.createForClass(TestResult);

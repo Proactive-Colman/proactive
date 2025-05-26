@@ -37,6 +37,7 @@ class TestResult(BaseModel):
     testId: str
     status: str
     executionTime: float
+    totalRuntime: float
     steps: List[StepResult]
     error: Optional[str] = None
 
@@ -163,19 +164,23 @@ def execute_test(test):
                 }
         
         execution_time = time.time() - start_time
+        total_runtime = sum(step['duration'] for step in step_results)
         return {
             'testId': test['_id'],
             'status': 'completed',
             'executionTime': execution_time,
+            'totalRuntime': total_runtime,
             'steps': step_results
         }
         
     except Exception as e:
         execution_time = time.time() - start_time
+        total_runtime = sum(step['duration'] for step in step_results)
         return {
             'testId': test['_id'],
             'status': 'failed',
             'executionTime': execution_time,
+            'totalRuntime': total_runtime,
             'error': str(e),
             'steps': step_results
         }

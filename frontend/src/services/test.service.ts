@@ -25,15 +25,16 @@ export interface TestResult {
   testId: string;
   status: string;
   executionTime: number;
-  error?: string;
-  timestamp: Date;
-  createdAt?: Date;
-  steps?: {
+  totalRuntime?: number;
+  steps: {
     name: string;
     status: string;
     duration: number;
     error?: string;
   }[];
+  error?: string;
+  timestamp: Date;
+  createdAt?: Date;
 }
 
 export const testService = {

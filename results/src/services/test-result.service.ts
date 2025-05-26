@@ -47,6 +47,9 @@ export class TestResultService {
       averageExecutionTime:
         results.reduce((acc, curr) => acc + curr.executionTime, 0) /
         results.length,
+      averageTotalRuntime:
+        results.reduce((acc, curr) => acc + curr.totalRuntime, 0) /
+        results.length,
       stepStats: this.calculateStepStats(results),
     };
   }

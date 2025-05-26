@@ -204,7 +204,7 @@ export function Dashboard() {
         datasets: [
           {
             label: 'Execution Time (s)',
-            data: results.map((r) => r.executionTime),
+            data: results.map((r) => r.totalRuntime),
             borderColor: chartColors.teal,
             backgroundColor: 'rgba(32,201,151,0.12)',
             tension: 0.4,
@@ -367,8 +367,8 @@ export function Dashboard() {
                       Average Duration
                     </Text>
                     <Text size="lg" fw={700}>
-                      {stats?.averageExecutionTime
-                        ? stats.averageExecutionTime.toFixed(2) + 's'
+                      {stats?.averageTotalRuntime
+                        ? stats.averageTotalRuntime.toFixed(2) + 's'
                         : '-'}
                     </Text>
                   </Stack>
@@ -503,7 +503,7 @@ export function Dashboard() {
                           </Badge>
                         </Table.Td>
                         <Table.Td>
-                          {result.executionTime ? `${result.executionTime.toFixed(2)}s` : '-'}
+                          {result.totalRuntime ? `${result.totalRuntime.toFixed(2)}s` : '-'}
                         </Table.Td>
                         <Table.Td>
                           <Group gap={4} wrap="wrap">
