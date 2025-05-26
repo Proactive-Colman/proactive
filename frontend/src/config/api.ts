@@ -1,7 +1,7 @@
 import config from '../../public/config.json';
 
-const apiUrl = import.meta.env.VITE_API_URL || config.apiUrl;
-const resultsUrl = import.meta.env.VITE_RESULTS_URL || config.resultsUrl;
+const apiUrl = import.meta.env.VITE_API_URL || '/backend';
+const resultsUrl = import.meta.env.VITE_RESULTS_URL || '/results';
 
 export const API_CONFIG = {
   BASE_URL: apiUrl,

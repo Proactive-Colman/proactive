@@ -1,25 +1,33 @@
 version: "3.8"
 
 services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+      - results
+
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "80:80"
     environment:
-      - NODE_ENV=production
-      - VITE_API_URL=http://backend:3000
+      - VITE_API_URL=/backend
+      - VITE_RESULTS_URL=/results
     depends_on:
       - backend
+      - results
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: proactive_backend
-    ports:
-      - "3000:3000"
     environment:
       - NODE_ENV=development
       - MONGODB_URI=mongodb://admin:bartar20%40CS@host.docker.internal:21771/proactive?authSource=admin
@@ -37,8 +45,6 @@ services:
       context: ./executor
       dockerfile: Dockerfile
     container_name: proactive_executor
-    ports:
-      - "8000:8000"
     environment:
       - BACKEND_URL=http://backend:3000
       - RESULTS_URL=http://results:3001
@@ -51,8 +57,6 @@ services:
       context: ./results
       dockerfile: Dockerfile
     container_name: proactive_results
-    ports:
-      - "3001:3001"
     environment:
       - NODE_ENV=development
       - MONGODB_URI=mongodb://admin:bartar20%40CS@host.docker.internal:21771/proactive?authSource=admin

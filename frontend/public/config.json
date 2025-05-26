@@ -1,6 +1,6 @@
 {
-  "apiUrl": "http://localhost:3000",
-  "resultsUrl": "http://localhost:3001",
+  "apiUrl": "/backend",
+  "resultsUrl": "/results",
   "endpoints": {
     "upload": "/upload",
     "tests": "/tests",
