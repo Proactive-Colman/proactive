@@ -104,6 +104,7 @@ export function Dashboard() {
   const [dataLoading, setDataLoading] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 20;
+  const [statusLineData, setStatusLineData] = useState<any>(null);
 
   // Helper for fallback values
   const getTestName = (test: Test) => test.name || 'Unnamed Test';
@@ -213,6 +214,24 @@ export function Dashboard() {
             pointRadius: 5,
             pointHoverRadius: 7,
             fill: true,
+          },
+        ],
+      });
+      // Status line chart
+      setStatusLineData({
+        labels: results.map((r) => new Date(r.createdAt || r.timestamp).toLocaleString()),
+        datasets: [
+          {
+            label: 'Status',
+            data: results.map((r) => (r.status === 'completed' ? 1 : 0)),
+            borderColor: chartColors.purple,
+            backgroundColor: 'rgba(132,94,247,0.12)',
+            tension: 0,
+            pointBackgroundColor: (context: { raw: number }) =>
+              context.raw === 1 ? chartColors.green : chartColors.red,
+            pointBorderColor: '#fff',
+            pointRadius: 5,
+            pointHoverRadius: 7,
           },
         ],
       });
@@ -464,7 +483,58 @@ export function Dashboard() {
                     Execution Duration Over Time
                   </Title>
                   <div style={{ height: 260 }}>
-                    <Line data={lineData} options={{ maintainAspectRatio: false }} />
+                    <Line
+                      data={lineData}
+                      options={{
+                        maintainAspectRatio: false,
+                        scales: {
+                          y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                              display: true,
+                              text: 'Duration (s)',
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                </Paper>
+              </Grid.Col>
+            </Grid>
+
+            <Grid>
+              <Grid.Col span={12}>
+                <Paper p="sm" radius="md" style={{ height: 320, marginTop: 16 }}>
+                  <Title order={4} mb="xs" size="md">
+                    Test Status Over Time
+                  </Title>
+                  <div style={{ height: 260 }}>
+                    <Line
+                      data={statusLineData}
+                      options={{
+                        maintainAspectRatio: false,
+                        scales: {
+                          y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            min: 0,
+                            max: 1,
+                            ticks: {
+                              stepSize: 1,
+                              callback: (value) => (value === 1 ? 'Success' : 'Failure'),
+                            },
+                            title: {
+                              display: true,
+                              text: 'Status',
+                            },
+                          },
+                        },
+                      }}
+                    />
                   </div>
                 </Paper>
               </Grid.Col>
