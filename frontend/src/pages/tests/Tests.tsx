@@ -57,6 +57,7 @@ const createBtnHoverText = '#fff';
 export function Tests() {
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creatingTest, setCreatingTest] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState<TestFormData>({
@@ -64,6 +65,28 @@ export function Tests() {
     description: '',
   });
   const [file, setFile] = useState<File | null>(null);
+  const [formErrors, setFormErrors] = useState<{
+    name?: string;
+    description?: string;
+    file?: string;
+  }>({});
+
+  const validateForm = () => {
+    const errors: typeof formErrors = {};
+    if (!formData.name.trim()) {
+      errors.name = 'Name is required';
+    }
+    if (!formData.description.trim()) {
+      errors.description = 'Description is required';
+    }
+    if (!file) {
+      errors.file = 'Python file is required';
+    } else if (!file.name.endsWith('.py')) {
+      errors.file = 'File must be a .py Python file';
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   useEffect(() => {
     loadTests();
@@ -82,7 +105,15 @@ export function Tests() {
   };
 
   const handleCreateTest = () => {
+    resetForm();
     setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    if (!creatingTest) {
+      setModalOpen(false);
+      resetForm();
+    }
   };
 
   const handleDeleteTest = async (id: string) => {
@@ -97,18 +128,31 @@ export function Tests() {
 
   const handleSubmit = async () => {
     try {
-      if (!file) throw new Error('Python file is required');
-      if (!file.name.endsWith('.py')) throw new Error('File must be a .py Python file');
+      if (!validateForm()) {
+        return;
+      }
+      setCreatingTest(true);
+      setError(null);
       const form = new FormData();
-      form.append('name', formData.name);
-      form.append('description', formData.description);
-      form.append('file', file);
+      form.append('name', formData.name.trim());
+      form.append('description', formData.description.trim());
+      form.append('file', file!);
       await testService.createTest(form);
       setModalOpen(false);
+      resetForm();
       await loadTests();
     } catch (e: any) {
       setError(e.message || 'Failed to save test');
+    } finally {
+      setCreatingTest(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({ name: '', description: '' });
+    setFile(null);
+    setError(null);
+    setFormErrors({});
   };
 
   if (loading) {
@@ -264,65 +308,152 @@ export function Tests() {
 
         <Modal
           opened={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={handleCloseModal}
           title="Create Test"
           size="lg"
+          closeOnClickOutside={!creatingTest}
+          closeOnEscape={!creatingTest}
           styles={{
             header: { background: cardBg },
             body: { background: bgColor },
             title: { color: textColor, fontWeight: 700 },
           }}
         >
-          <Stack>
-            <TextInput
-              label="Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              styles={{ input: { background: cardBg, color: textColor, borderRadius: 8 } }}
-            />
-            <Textarea
-              label="Description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              styles={{ input: { background: cardBg, color: textColor, borderRadius: 8 } }}
-            />
-            {!file && (
-              <Dropzone
-                onDrop={(files) => setFile(files[0])}
-                accept={{ 'text/x-python': ['.py'] }}
-                maxFiles={1}
-                multiple={false}
+          <div style={{ position: 'relative' }}>
+            {creatingTest && (
+              <div
                 style={{
-                  background: cardBg,
-                  border: `2px dashed ${accentColor}`,
-                  borderRadius: 12,
-                  padding: 24,
-                  textAlign: 'center',
-                  minHeight: 120,
-                  position: 'relative',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                  borderRadius: 8,
                 }}
               >
-                <Stack align="center" gap={4} style={{ width: '100%' }}>
-                  <IconUpload size={32} color={accentColor} />
-                  <Text size="sm" style={{ color: textColor }}>
-                    Drag a Python file here or click to select
-                  </Text>
-                  <Text size="xs" style={{ color: dimmedColor }}>
-                    Only .py files are accepted
+                <Stack align="center" gap="md">
+                  <Loader size="xl" color={accentColor} />
+                  <Text size="lg" fw={500} style={{ color: textColor }}>
+                    Creating your test...
                   </Text>
                 </Stack>
-              </Dropzone>
+              </div>
             )}
-            <Button
-              onClick={handleSubmit}
-              variant="filled"
-              color={accentColor}
-              style={{ background: accentColor, fontWeight: 600, borderRadius: 10 }}
-            >
-              Create Test
-            </Button>
-          </Stack>
+
+            <Stack>
+              {error && (
+                <Text color="red" size="sm" style={{ marginBottom: 8 }}>
+                  {error}
+                </Text>
+              )}
+              <TextInput
+                label="Name"
+                value={formData.name}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  if (formErrors.name) {
+                    setFormErrors({ ...formErrors, name: undefined });
+                  }
+                }}
+                required
+                disabled={creatingTest}
+                error={formErrors.name}
+                styles={{ input: { background: cardBg, color: textColor, borderRadius: 8 } }}
+              />
+              <Textarea
+                label="Description"
+                value={formData.description}
+                onChange={(e) => {
+                  setFormData({ ...formData, description: e.target.value });
+                  if (formErrors.description) {
+                    setFormErrors({ ...formErrors, description: undefined });
+                  }
+                }}
+                required
+                disabled={creatingTest}
+                error={formErrors.description}
+                styles={{ input: { background: cardBg, color: textColor, borderRadius: 8 } }}
+              />
+              {!file && (
+                <Dropzone
+                  onDrop={(files) => {
+                    setFile(files[0]);
+                    if (formErrors.file) {
+                      setFormErrors({ ...formErrors, file: undefined });
+                    }
+                  }}
+                  accept={{ 'text/x-python': ['.py'] }}
+                  maxFiles={1}
+                  multiple={false}
+                  disabled={creatingTest}
+                  style={{
+                    background: cardBg,
+                    border: `2px dashed ${formErrors.file ? '#fa5252' : accentColor}`,
+                    borderRadius: 12,
+                    padding: 24,
+                    textAlign: 'center',
+                    minHeight: 120,
+                    position: 'relative',
+                    opacity: creatingTest ? 0.6 : 1,
+                  }}
+                >
+                  <Stack align="center" gap={4} style={{ width: '100%' }}>
+                    <IconUpload size={32} color={formErrors.file ? '#fa5252' : accentColor} />
+                    <Text size="sm" style={{ color: textColor }}>
+                      Drag a Python file here or click to select
+                    </Text>
+                    <Text size="xs" style={{ color: dimmedColor }}>
+                      Only .py files are accepted
+                    </Text>
+                  </Stack>
+                </Dropzone>
+              )}
+              {formErrors.file && (
+                <Text color="red" size="xs" style={{ marginTop: -8 }}>
+                  {formErrors.file}
+                </Text>
+              )}
+              {file && !creatingTest && (
+                <Group
+                  justify="space-between"
+                  align="center"
+                  style={{ background: cardBg, padding: 12, borderRadius: 8 }}
+                >
+                  <Text size="sm" style={{ color: textColor }}>
+                    {file.name}
+                  </Text>
+                  <ActionIcon
+                    variant="light"
+                    color="red"
+                    onClick={() => {
+                      setFile(null);
+                      if (formErrors.file) {
+                        setFormErrors({ ...formErrors, file: undefined });
+                      }
+                    }}
+                    disabled={creatingTest}
+                  >
+                    <IconX size={16} />
+                  </ActionIcon>
+                </Group>
+              )}
+              <Button
+                onClick={handleSubmit}
+                variant="filled"
+                color={accentColor}
+                style={{ background: accentColor, fontWeight: 600, borderRadius: 10 }}
+                loading={creatingTest}
+                disabled={creatingTest}
+              >
+                {creatingTest ? 'Creating...' : 'Create Test'}
+              </Button>
+            </Stack>
+          </div>
         </Modal>
       </Stack>
     </Container>
