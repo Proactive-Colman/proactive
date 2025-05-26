@@ -8,7 +8,8 @@ import { SwaggerModule } from "@nestjs/swagger";
 @Module({
   imports: [
     MongooseModule.forRoot(
-      process.env.MONGODB_URI || "mongodb://localhost/proactive"
+      process.env.MONGODB_URI ||
+        "mongodb://admin:bartar20%40CS@host.docker.internal:21771/proactive?authSource=admin"
     ),
     MongooseModule.forFeature([
       { name: TestResult.name, schema: TestResultSchema },

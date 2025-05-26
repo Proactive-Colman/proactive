@@ -22,13 +22,8 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      - DATABASE_HOST=host.docker.internal
-      - DATABASE_PORT=5432
-      - DATABASE_USERNAME=postgres
-      - DATABASE_PASSWORD=bartar20@CS
-      - DATABASE_NAME=proactive
+      - MONGODB_URI=mongodb://admin:bartar20%40CS@host.docker.internal:21771/proactive?authSource=admin
       - JWT_SECRET=your-secret-key
-      - MONGODB_URI=mongodb://admin:bartar20%40CS@host.docker.internal:21771/proactive
       - OPENAI_API_KEY=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
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -60,7 +55,7 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=development
-      - MONGODB_URI=mongodb://admin:bartar20%40CS@host.docker.internal:21771/proactive
+      - MONGODB_URI=mongodb://admin:bartar20%40CS@host.docker.internal:21771/proactive?authSource=admin
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

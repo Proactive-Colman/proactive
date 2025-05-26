@@ -10,7 +10,7 @@ import { MongooseModule } from '@nestjs/mongoose';
       isGlobal: true,
       load: [configuration],
     }),
-    MongooseModule.forRoot('mongodb://mongodb:27017/proactive'),
+    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost/proactive'),
     UploadModule,
   ],
 })
