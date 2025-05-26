@@ -22,6 +22,9 @@ import {
   Input,
   ActionIcon,
   Pagination,
+  Modal,
+  Box,
+  Collapse,
 } from '@mantine/core';
 import {
   IconPlayerPlay,
@@ -32,9 +35,14 @@ import {
   IconAlertCircle,
   IconSearch,
   IconRefresh,
+  IconClockHour4,
+  IconCalendar,
+  IconExclamationCircle,
+  IconChevronDown,
+  IconChevronUp,
 } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { testService, Test } from '@/services/test.service';
+import { testService, Test, TestResult } from '@/services/test.service';
 import { LineChart } from './components/LineChart';
 import { Pie, Bar } from 'react-chartjs-2';
 import { Line } from 'react-chartjs-2';
@@ -105,6 +113,10 @@ export function Dashboard() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const [statusLineData, setStatusLineData] = useState<any>(null);
+  const [selectedRun, setSelectedRun] = useState<TestResult | null>(null);
+  const accentColor = theme.colors.teal[6];
+  const dimmedColor = theme.colors.gray[6];
+  const [errorExpanded, setErrorExpanded] = useState(false);
 
   // Helper for fallback values
   const getTestName = (test: Test) => test.name || 'Unnamed Test';
@@ -280,6 +292,28 @@ export function Dashboard() {
     .slice()
     .reverse()
     .slice((page - 1) * pageSize, page * pageSize);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return theme.colors.green[6];
+      case 'failed':
+        return theme.colors.red[6];
+      default:
+        return theme.colors.gray[6];
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <IconCheck size={16} color={theme.colors.green[6]} />;
+      case 'failed':
+        return <IconX size={16} color={theme.colors.red[6]} />;
+      default:
+        return <IconClock size={16} color={theme.colors.gray[6]} />;
+    }
+  };
 
   if (loading) {
     return (
@@ -562,7 +596,11 @@ export function Dashboard() {
                   </Table.Thead>
                   <Table.Tbody>
                     {paginatedResults.map((result, i) => (
-                      <Table.Tr key={i}>
+                      <Table.Tr
+                        key={i}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setSelectedRun(result)}
+                      >
                         <Table.Td>
                           <Badge
                             color={result.status === 'completed' ? 'green' : 'red'}
@@ -632,6 +670,124 @@ export function Dashboard() {
           </>
         )}
       </Stack>
+
+      <Modal
+        opened={!!selectedRun}
+        onClose={() => setSelectedRun(null)}
+        size="lg"
+        title={
+          <Group>
+            {selectedRun && getStatusIcon(selectedRun.status)}
+            <Text fw={600}>Test Run Details</Text>
+          </Group>
+        }
+      >
+        {selectedRun && (
+          <Stack gap="md">
+            <Group>
+              <Card withBorder p="md" radius="md" style={{ flex: 1 }}>
+                <Stack gap="xs">
+                  <Group gap="xs">
+                    <IconClockHour4 size={16} color={theme.colors.teal[6]} />
+                    <Text size="sm" c="dimmed">
+                      Total Duration
+                    </Text>
+                  </Group>
+                  <Text fw={600}>
+                    {selectedRun.totalRuntime?.toFixed(2) ?? selectedRun.executionTime.toFixed(2)}s
+                  </Text>
+                </Stack>
+              </Card>
+              <Card withBorder p="md" radius="md" style={{ flex: 1 }}>
+                <Stack gap="xs">
+                  <Group gap="xs">
+                    <IconCalendar size={16} color={theme.colors.teal[6]} />
+                    <Text size="sm" c="dimmed">
+                      Execution Time
+                    </Text>
+                  </Group>
+                  <Text fw={600}>
+                    {new Date(selectedRun.createdAt || selectedRun.timestamp).toLocaleString()}
+                  </Text>
+                </Stack>
+              </Card>
+            </Group>
+
+            {selectedRun.error && (
+              <Card withBorder p="md" radius="md" style={{ borderColor: theme.colors.red[6] }}>
+                <Group
+                  gap="xs"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setErrorExpanded(!errorExpanded)}
+                >
+                  <IconExclamationCircle size={16} color={theme.colors.red[6]} />
+                  <Text fw={600} c="red">
+                    Error
+                  </Text>
+                  <ActionIcon variant="subtle" color="red" size="sm" style={{ marginLeft: 'auto' }}>
+                    {errorExpanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+                  </ActionIcon>
+                </Group>
+                <Collapse in={errorExpanded}>
+                  <Text size="sm" mt="xs" style={{ whiteSpace: 'pre-wrap' }}>
+                    {selectedRun.error}
+                  </Text>
+                </Collapse>
+              </Card>
+            )}
+
+            <Card withBorder p="md" radius="md">
+              <Text fw={600} mb="md">
+                Steps
+              </Text>
+              <Timeline
+                active={selectedRun.steps.length - 1}
+                bulletSize={10}
+                lineWidth={3}
+                color={accentColor}
+              >
+                {selectedRun.steps.map((step, idx) => (
+                  <Timeline.Item
+                    key={idx}
+                    bullet={getStatusIcon(step.status)}
+                    title={
+                      <Group gap="xs">
+                        <Text size="sm" fw={500} c={getStatusColor(step.status)}>
+                          {step.name}
+                        </Text>
+                        <Badge
+                          size="sm"
+                          variant="light"
+                          color={
+                            step.status === 'completed'
+                              ? 'green'
+                              : step.status === 'failed'
+                                ? 'red'
+                                : 'gray'
+                          }
+                        >
+                          {step.duration.toFixed(2)}s
+                        </Badge>
+                      </Group>
+                    }
+                    style={{
+                      minHeight: 18,
+                      paddingTop: 0,
+                      paddingBottom: 0,
+                    }}
+                  >
+                    {step.error && (
+                      <Text size="xs" c="red" mt={4} style={{ whiteSpace: 'pre-wrap' }}>
+                        {step.error}
+                      </Text>
+                    )}
+                  </Timeline.Item>
+                ))}
+              </Timeline>
+            </Card>
+          </Stack>
+        )}
+      </Modal>
     </Container>
   );
 }
