@@ -60,7 +60,7 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=development
-      - MONGODB_URI=mongodb://admin:bartar20@CS@host.docker.internal:21771/proactive
+      - MONGODB_URI=mongodb://admin:bartar20%40CS@host.docker.internal:21771/proactive
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
