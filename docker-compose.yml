@@ -28,7 +28,7 @@ services:
       - DATABASE_PASSWORD=bartar20@CS
       - DATABASE_NAME=proactive
       - JWT_SECRET=your-secret-key
-      - MONGODB_URI=mongodb://admin:bartar20@CS@host.docker.internal:21771/proactive
+      - MONGODB_URI=mongodb://admin:bartar20%40CS@host.docker.internal:21771/proactive
       - OPENAI_API_KEY=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
     extra_hosts:
       - "host.docker.internal:host-gateway"
