@@ -1,12 +1,9 @@
 /**
- * Modern green/teal admin dashboard layout inspired by the reference image.
+ * Modern green/teal admin dashboard layout with authentication.
  */
-import React, { lazy, Suspense, useMemo, ReactNode, useEffect } from 'react';
-import useAuth from '@/utils/hooks/useAuth';
-import useLocale from '@/utils/hooks/useLocale';
+import React, { lazy, Suspense, useMemo, ReactNode, useEffect, useState } from 'react';
 import LoadingScreen from '@/components/LoadingScreen/LoadingScreen';
-import { LayoutTypes } from '@/@types/layout';
-import { useAppSelector } from '@/store';
+import { authService } from '@/services/auth.service';
 import {
   AppShell,
   Text,
@@ -17,55 +14,83 @@ import {
   Input,
   ActionIcon,
   Paper,
+  Menu,
+  UnstyledButton,
+  Stack,
 } from '@mantine/core';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { IconDashboard, IconTestPipe, IconBell, IconSearch } from '@tabler/icons-react';
+import {
+  IconDashboard,
+  IconTestPipe,
+  IconBell,
+  IconSearch,
+  IconLogout,
+  IconUser,
+  IconChevronDown,
+} from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 
-const layouts: any = {
-  [LayoutTypes.SimpleSideBar]: lazy(() => import('./LayoutTypes/SimpleSideBar')),
-  [LayoutTypes.DeckedSideBar]: lazy(() => import('./LayoutTypes/DeckedSideBar')),
-  [LayoutTypes.CollapsedSideBar]: lazy(() => import('./LayoutTypes/CollapsedSideBar')),
-};
-
-interface LayoutProps {
-  children: ReactNode;
-}
-
 export function Layout() {
-  const { authenticated } = useAuth();
-  const layoutType = useAppSelector((state) => state.theme.currentLayout);
   const [opened, { toggle }] = useDisclosure();
   const location = useLocation();
   const navigate = useNavigate();
-
-  useLocale();
+  const [user, setUser] = useState(authService.getUser());
+  const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
 
   useEffect(() => {
-    if (location.pathname === '/') {
-      navigate('/dashboard', { replace: true });
-    }
+    // Set up auth interceptors on app start
+    authService.setupInterceptors();
+
+    const checkAuth = () => {
+      const authenticated = authService.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      setUser(authService.getUser());
+
+      // Check if current route is login/signup
+      const isAuthRoute = location.pathname === '/login' || location.pathname === '/signup';
+
+      if (!authenticated && !isAuthRoute) {
+        // Not authenticated and not on auth route - redirect to login
+        navigate('/login', { replace: true });
+      } else if (authenticated && isAuthRoute) {
+        // Authenticated but on auth route - redirect to dashboard
+        navigate('/dashboard', { replace: true });
+      } else if (authenticated && location.pathname === '/') {
+        // Authenticated and on root - redirect to dashboard
+        navigate('/dashboard', { replace: true });
+      }
+    };
+
+    checkAuth();
   }, [location.pathname, navigate]);
 
-  const AppLayout = useMemo(() => {
-    if (authenticated) {
-      return layouts[layoutType];
-    }
-    return lazy(() => import('./AuthLayout'));
-  }, [authenticated]);
+  const handleLogout = () => {
+    authService.logout();
+    setIsAuthenticated(false);
+    setUser(null);
+    navigate('/login', { replace: true });
+  };
 
   const navItems = [
     { icon: IconDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: IconTestPipe, label: 'Tests', path: '/tests' },
   ];
 
+  // If not authenticated and not on auth routes, show loading while redirecting
+  if (!isAuthenticated && location.pathname !== '/login' && location.pathname !== '/signup') {
+    return <LoadingScreen />;
+  }
+
+  // If on auth routes, don't show the layout - just render the outlet
+  if (location.pathname === '/login' || location.pathname === '/signup') {
+    return <Outlet />;
+  }
+
   return (
     <AppShell
       header={{ height: 64 }}
       navbar={{ width: 240, breakpoint: 'sm', collapsed: { mobile: !opened } }}
       padding="md"
-      navbarOffsetBreakpoint="sm"
-      fixed
       styles={{
         main: { background: '#f8f9fa', minHeight: '100vh' },
       }}
@@ -82,7 +107,7 @@ export function Layout() {
         <Group h="100%" px="lg" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" color="#20c997" />
-            {/* Logo placeholder */}
+            {/* Logo */}
             <Paper
               radius={12}
               p={4}
@@ -97,9 +122,40 @@ export function Layout() {
             <ActionIcon variant="light" color="teal" size="lg">
               <IconBell size={22} />
             </ActionIcon>
-            <Avatar radius="xl" color="teal" size={36} src={null} style={{ fontWeight: 700 }}>
-              U
-            </Avatar>
+
+            {/* Profile Dropdown */}
+            <Menu shadow="md" width={200} position="bottom-end">
+              <Menu.Target>
+                <UnstyledButton>
+                  <Group gap={8}>
+                    <Avatar radius="xl" color="teal" size={36} style={{ fontWeight: 700 }}>
+                      {user?.username?.charAt(0).toUpperCase() || 'U'}
+                    </Avatar>
+                    <Group gap={4} visibleFrom="sm">
+                      <Text size="sm" fw={500} style={{ color: '#212529' }}>
+                        {user?.username || 'User'}
+                      </Text>
+                      <IconChevronDown size={14} color="#868e96" />
+                    </Group>
+                  </Group>
+                </UnstyledButton>
+              </Menu.Target>
+
+              <Menu.Dropdown>
+                <Menu.Label>Account</Menu.Label>
+                <Menu.Item leftSection={<IconUser size={16} />} disabled>
+                  {user?.username || 'User'}
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item
+                  leftSection={<IconLogout size={16} />}
+                  color="red"
+                  onClick={handleLogout}
+                >
+                  Sign out
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
           </Group>
         </Group>
       </AppShell.Header>
@@ -113,7 +169,7 @@ export function Layout() {
           boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)',
         }}
       >
-        <Group direction="column" gap={4} align="stretch" style={{ marginTop: 24 }}>
+        <Stack gap={4} align="stretch" style={{ marginTop: 24 }}>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -143,7 +199,7 @@ export function Layout() {
               />
             );
           })}
-        </Group>
+        </Stack>
       </AppShell.Navbar>
 
       {/* MAIN CONTENT */}

@@ -9,12 +9,15 @@ import {
   MaxFileSizeValidator,
   FileTypeValidator,
   FileValidator,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { TestService } from '../services/test.service';
-import { ApiConsumes, ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiConsumes, ApiBody, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Test } from '../models/test.model';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 class PythonFileValidator extends FileValidator<Record<string, any>> {
   constructor() {
@@ -44,8 +47,10 @@ class PythonFileValidator extends FileValidator<Record<string, any>> {
   }
 }
 
-@ApiTags('Upload')
 @Controller('upload')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@ApiTags('upload')
 export class UploadController {
   constructor(private readonly testService: TestService) {}
 
@@ -95,51 +100,37 @@ export class UploadController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({
-            maxSize: 5 * 1024 * 1024, // 5MB
-          }),
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }), // 10MB
           new PythonFileValidator(),
         ],
-        fileIsRequired: true,
       }),
     )
     file: Express.Multer.File,
-    @Body() body: { name: string; description: string },
-  ): Promise<Test | null> {
-    try {
-      if (!file) {
-        throw new BadRequestException('No file provided');
-      }
-
-      // Log file details for debugging
-      console.log('File details:', {
-        originalname: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-        buffer: file.buffer ? 'Buffer exists' : 'No buffer',
-      });
-
-      if (!file.buffer) {
-        throw new BadRequestException(
-          'File buffer is empty. Please ensure the file is being properly uploaded.',
-        );
-      }
-
-      if (!body.name || !body.description) {
-        throw new BadRequestException('Name and description are required');
-      }
-
-      const pythonContent = file.buffer.toString('utf-8');
-      const test = await this.testService.processPythonFile(pythonContent);
-      const updatedTest = await this.testService.updateTestNameAndDescription((test as any)._id, body.name, body.description);
-      return updatedTest;
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new BadRequestException(
-        'Failed to process Python file: ' + error.message,
-      );
+    @Body('name') name: string,
+    @Body('description') description: string,
+    @Request() req,
+  ): Promise<Test> {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
     }
+
+    const fileContent = file.buffer.toString('utf-8');
+    const test = await this.testService.processPythonFile(fileContent, req.user._id);
+
+    // Update test with name and description if provided
+    if (name || description) {
+      const updatedTest = await this.testService.updateTestNameAndDescription(
+        (test as any)._id.toString(),
+        name || test.name,
+        description || test.description,
+        req.user._id,
+      );
+      if (!updatedTest) {
+        throw new BadRequestException('Failed to update test with name and description');
+      }
+      return updatedTest;
+    }
+
+    return test;
   }
 }

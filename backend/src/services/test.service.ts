@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Test, TestDocument } from '../models/test.model';
 import { OpenAI } from 'openai';
 
@@ -112,8 +112,9 @@ Example output:
     }
   }
 
-  async processPythonFile(fileContent: string): Promise<Test> {
+  async processPythonFile(fileContent: string, userId: string): Promise<Test> {
     try {
+      this.logger.log('Starting to process Python file');
       // Extract the URL from the Python file
       const urlMatch = fileContent.match(/self\.driver\.get\("([^"]+)"\)/);
       if (!urlMatch) {
@@ -175,12 +176,13 @@ Example output:
       const steps = await this.analyzeAndCombineSteps(commands);
 
       const test = new this.testModel({
+        userId: new Types.ObjectId(userId),
         startUrl,
         steps,
       });
 
       const savedTest = await test.save();
-      this.logger.log(`Created test with ID: ${savedTest._id}`);
+      this.logger.log(`Created test with ID: ${savedTest._id} for user: ${userId}`);
       return savedTest;
     } catch (error) {
       throw new Error(`Failed to process Python file: ${error.message}`);
@@ -193,9 +195,16 @@ Example output:
     return tests;
   }
 
-  async getTestById(id: string): Promise<Test> {
+  async getTestsByUser(userId: string): Promise<Test[]> {
+    const tests = await this.testModel.find({ userId: new Types.ObjectId(userId) }).exec();
+    this.logger.log(`Found ${tests.length} tests for user: ${userId}`);
+    return tests;
+  }
+
+  async getTestById(id: string, userId?: string): Promise<Test> {
     this.logger.log(`Looking for test with ID: ${id}`);
-    const test = await this.testModel.findOne({ _id: id }).exec();
+    const query = userId ? { _id: id, userId: new Types.ObjectId(userId) } : { _id: id };
+    const test = await this.testModel.findOne(query).exec();
     if (!test) {
       this.logger.error(`Test not found with ID: ${id}`);
       throw new NotFoundException(`Test with ID ${id} not found`);
@@ -224,14 +233,17 @@ Example output:
       .exec();
   }
 
-  async deleteTest(id: string): Promise<boolean> {
-    const result = await this.testModel.findByIdAndDelete(id).exec();
+  async deleteTest(id: string, userId: string): Promise<boolean> {
+    const result = await this.testModel.findOneAndDelete({ 
+      _id: id, 
+      userId: new Types.ObjectId(userId) 
+    }).exec();
     return !!result;
   }
 
-  async updateTestNameAndDescription(id: string, name: string, description: string): Promise<Test | null> {
-    return this.testModel.findByIdAndUpdate(
-      id,
+  async updateTestNameAndDescription(id: string, name: string, description: string, userId: string): Promise<Test | null> {
+    return this.testModel.findOneAndUpdate(
+      { _id: id, userId: new Types.ObjectId(userId) },
       { name, description },
       { new: true }
     ).exec();

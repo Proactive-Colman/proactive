@@ -7,66 +7,56 @@ import {
   Put,
   Delete,
   NotFoundException,
-  UseInterceptors,
-  UploadedFile,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { TestService } from '../services/test.service';
 import { Test } from '../models/test.model';
-import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ApiOperation, ApiParam, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('tests')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class TestController {
   constructor(private readonly testService: TestService) {}
 
-  @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: Express.Multer.File): Promise<Test> {
-    if (!file) {
-      throw new NotFoundException('No file uploaded');
-    }
-    const content = file.buffer.toString();
-    return this.testService.processPythonFile(content);
-  }
-
-  @Post('process')
-  async processPythonFile(@Body() body: { content: string }): Promise<Test> {
-    if (!body.content) {
-      throw new NotFoundException('Python content is required');
-    }
-    return this.testService.processPythonFile(body.content);
-  }
-
   @Get()
-  async getAllTests(): Promise<Test[]> {
-    return this.testService.getAllTests();
+  @ApiOperation({ summary: 'Get all tests for the authenticated user' })
+  @ApiResponse({ status: 200, description: 'List of tests', type: [Test] })
+  async getAllTests(@Request() req): Promise<Test[]> {
+    return this.testService.getTestsByUser(req.user._id);
   }
 
   @Get(':id')
-  async getTestById(@Param('id') id: string): Promise<Test> {
-    const test = await this.testService.getTestById(id);
-    if (!test) {
-      throw new NotFoundException(`Test with ID ${id} not found`);
-    }
-    return test;
+  @ApiOperation({ summary: 'Get a test by ID' })
+  @ApiParam({ name: 'id', description: 'The ID of the test' })
+  @ApiResponse({ status: 200, description: 'The test', type: Test })
+  @ApiResponse({ status: 404, description: 'Test not found' })
+  async getTestById(@Param('id') id: string, @Request() req): Promise<Test> {
+    return this.testService.getTestById(id, req.user._id);
   }
 
-  @Put(':id/status')
-  async updateTestStatus(
+  @Put(':id')
+  @ApiOperation({ summary: 'Update a test name and description' })
+  @ApiParam({ name: 'id', description: 'The ID of the test to update' })
+  @ApiResponse({ status: 200, description: 'Test updated successfully', type: Test })
+  @ApiResponse({ status: 404, description: 'Test not found' })
+  async updateTest(
     @Param('id') id: string,
-    @Body()
-    updateData: { status: string; executionTime?: number; error?: string },
+    @Body() updateData: { name: string; description: string },
+    @Request() req,
   ): Promise<Test> {
-    const test = await this.testService.updateTestStatus(
+    const updatedTest = await this.testService.updateTestNameAndDescription(
       id,
-      updateData.status,
-      updateData.executionTime,
-      updateData.error,
+      updateData.name,
+      updateData.description,
+      req.user._id,
     );
-    if (!test) {
+    if (!updatedTest) {
       throw new NotFoundException(`Test with ID ${id} not found`);
     }
-    return test;
+    return updatedTest;
   }
 
   @Delete(':id')
@@ -74,8 +64,8 @@ export class TestController {
   @ApiParam({ name: 'id', description: 'The ID of the test to delete' })
   @ApiResponse({ status: 204, description: 'Test deleted successfully' })
   @ApiResponse({ status: 404, description: 'Test not found' })
-  async deleteTest(@Param('id') id: string): Promise<void> {
-    const result = await this.testService.deleteTest(id);
+  async deleteTest(@Param('id') id: string, @Request() req): Promise<void> {
+    const result = await this.testService.deleteTest(id, req.user._id);
     if (!result) {
       throw new NotFoundException(`Test with ID ${id} not found`);
     }
