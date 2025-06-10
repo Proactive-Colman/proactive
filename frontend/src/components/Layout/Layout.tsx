@@ -36,12 +36,20 @@ export function Layout() {
   const navigate = useNavigate();
   const [user, setUser] = useState(authService.getUser());
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isAuthenticated());
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
     // Set up auth interceptors on app start
     authService.setupInterceptors();
 
     const checkAuth = () => {
+      // Wait for auth service to be initialized
+      if (!authService.isInitialized()) {
+        setTimeout(checkAuth, 50);
+        return;
+      }
+
+      setAuthInitialized(true);
       const authenticated = authService.isAuthenticated();
       setIsAuthenticated(authenticated);
       setUser(authService.getUser());
@@ -75,6 +83,11 @@ export function Layout() {
     { icon: IconDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: IconTestPipe, label: 'Tests', path: '/tests' },
   ];
+
+  // Show loading while auth is initializing
+  if (!authInitialized) {
+    return <LoadingScreen />;
+  }
 
   // If not authenticated and not on auth routes, show loading while redirecting
   if (!isAuthenticated && location.pathname !== '/login' && location.pathname !== '/signup') {

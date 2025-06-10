@@ -59,6 +59,7 @@ import {
   BarElement,
 } from 'chart.js';
 import { API_CONFIG } from '@/config/api';
+import { authService } from '@/services/auth.service';
 
 // Register Chart.js components
 ChartJS.register(
@@ -117,13 +118,29 @@ export function Dashboard() {
   const accentColor = theme.colors.teal[6];
   const dimmedColor = theme.colors.gray[6];
   const [errorExpanded, setErrorExpanded] = useState(false);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   // Helper for fallback values
   const getTestName = (test: Test) => test.name || 'Unnamed Test';
   const getTestDescription = (test: Test) => test.description || 'No description';
 
   useEffect(() => {
-    loadTests();
+    // Wait for auth initialization before making API calls
+    const checkAuthAndLoadData = () => {
+      if (authService.isInitialized() && authService.isAuthenticated()) {
+        setAuthInitialized(true);
+        loadTests();
+      } else if (authService.isInitialized() && !authService.isAuthenticated()) {
+        // Auth is initialized but user is not authenticated
+        // Let the Layout component handle the redirect
+        setAuthInitialized(true);
+      } else {
+        // Auth not yet initialized, wait a bit and check again
+        setTimeout(checkAuthAndLoadData, 50);
+      }
+    };
+
+    checkAuthAndLoadData();
   }, []);
 
   useEffect(() => {
@@ -315,7 +332,7 @@ export function Dashboard() {
     }
   };
 
-  if (loading) {
+  if (loading || !authInitialized) {
     return (
       <Center h="80vh" style={{ background: '#f8fafb' }}>
         <Loader size="xl" color="teal" />

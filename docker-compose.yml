@@ -34,7 +34,7 @@ services:
       - NODE_ENV=development
       - MONGODB_URI=mongodb://admin:bartar20%40CS@host.docker.internal:21771/proactive?authSource=admin
       - JWT_SECRET=your-secret-key
-      - OPENAI_API_KEY=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
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
