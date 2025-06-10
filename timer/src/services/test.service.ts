@@ -8,6 +8,7 @@ export class TestService {
   private readonly logger = new Logger(TestService.name);
   private readonly maxRetries = 3;
   private readonly retryDelay = 5000; // 5 seconds
+  private authToken: string | null = null;
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -29,13 +30,110 @@ export class TestService {
     }
   }
 
+  private async getAuthToken(): Promise<string> {
+    if (this.authToken) {
+      return this.authToken;
+    }
+
+    const backendUrl = this.configService.get<string>("backend.url");
+    const username = this.configService.get<string>("auth.username");
+    const password = this.configService.get<string>("auth.password");
+
+    if (!username || !password) {
+      this.logger.error(
+        "Timer auth credentials are not configured (TIMER_USERNAME/TIMER_PASSWORD)"
+      );
+      throw new Error("Missing timer auth credentials");
+    }
+
+    const attemptLogin = async (): Promise<string> => {
+      const response = await axios.post<{ token: string }>(
+        `${backendUrl}/auth/login`,
+        { username, password }
+      );
+      const token = (response.data as any)?.token;
+      if (!token) {
+        throw new Error("Login succeeded but no token returned");
+      }
+      return token;
+    };
+
+    try {
+      const token = await attemptLogin();
+      this.authToken = token;
+      this.logger.log("Obtained JWT for timer service");
+      return token;
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 401) {
+        this.logger.warn(
+          "Login failed with 401. Attempting signup then login..."
+        );
+        try {
+          await axios.post(`${backendUrl}/auth/signup`, { username, password });
+          const token = await attemptLogin();
+          this.authToken = token;
+          this.logger.log("Signed up and obtained JWT for timer service");
+          return token;
+        } catch (innerError) {
+          if (innerError instanceof AxiosError) {
+            this.logger.error(
+              `Failed to signup/login for timer: ${innerError.message} - ${
+                innerError.response?.data || "No response data"
+              }`
+            );
+          } else {
+            this.logger.error(
+              `Failed to signup/login for timer: ${
+                (innerError as any)?.message || innerError
+              }`
+            );
+          }
+          throw innerError;
+        }
+      }
+      if (error instanceof AxiosError) {
+        this.logger.error(
+          `Failed to login for timer: ${error.message} - ${
+            error.response?.data || "No response data"
+          }`
+        );
+      } else {
+        this.logger.error(
+          `Failed to login for timer: ${(error as any)?.message || error}`
+        );
+      }
+      throw error;
+    }
+  }
+
   async getAllTests(): Promise<Test[]> {
     try {
       const backendUrl = this.configService.get<string>("backend.url");
-      const response = await this.retry(() =>
-        axios.get<Test[]>(`${backendUrl}/tests`)
-      );
-      return response.data;
+      const performRequest = async (): Promise<Test[]> => {
+        const token = await this.getAuthToken();
+        try {
+          const response = await axios.get<Test[]>(`${backendUrl}/tests`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          return response.data;
+        } catch (err) {
+          if (err instanceof AxiosError && err.response?.status === 401) {
+            this.logger.warn(
+              "JWT rejected with 401. Refreshing token and retrying once..."
+            );
+            this.authToken = null;
+            const refreshedToken = await this.getAuthToken();
+            const retryResponse = await axios.get<Test[]>(
+              `${backendUrl}/tests`,
+              { headers: { Authorization: `Bearer ${refreshedToken}` } }
+            );
+            return retryResponse.data;
+          }
+          throw err;
+        }
+      };
+      const data = await this.retry(() => performRequest());
+      return data;
     } catch (error) {
       if (error instanceof AxiosError) {
         this.logger.error(

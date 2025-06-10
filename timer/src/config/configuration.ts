@@ -6,6 +6,10 @@ export default () => ({
   executor: {
     url: process.env.EXECUTOR_URL || "http://localhost:8000",
   },
+  auth: {
+    username: process.env.TIMER_USERNAME || "",
+    password: process.env.TIMER_PASSWORD || "",
+  },
   timer: {
     intervalMinutes: parseInt(
       process.env.EXECUTION_INTERVAL_MINUTES || "5",

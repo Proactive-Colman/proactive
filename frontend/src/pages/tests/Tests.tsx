@@ -26,6 +26,7 @@ import {
 } from '@tabler/icons-react';
 import { testService, Test } from '@/services/test.service';
 import { Dropzone } from '@mantine/dropzone';
+import { authService } from '@/services/auth.service';
 
 interface TestFormData {
   name: string;
@@ -70,6 +71,7 @@ export function Tests() {
     description?: string;
     file?: string;
   }>({});
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   const validateForm = () => {
     const errors: typeof formErrors = {};
@@ -89,7 +91,22 @@ export function Tests() {
   };
 
   useEffect(() => {
-    loadTests();
+    // Wait for auth initialization before making API calls
+    const checkAuthAndLoadData = () => {
+      if (authService.isInitialized() && authService.isAuthenticated()) {
+        setAuthInitialized(true);
+        loadTests();
+      } else if (authService.isInitialized() && !authService.isAuthenticated()) {
+        // Auth is initialized but user is not authenticated
+        // Let the Layout component handle the redirect
+        setAuthInitialized(true);
+      } else {
+        // Auth not yet initialized, wait a bit and check again
+        setTimeout(checkAuthAndLoadData, 50);
+      }
+    };
+
+    checkAuthAndLoadData();
   }, []);
 
   const loadTests = async () => {
@@ -155,7 +172,7 @@ export function Tests() {
     setFormErrors({});
   };
 
-  if (loading) {
+  if (loading || !authInitialized) {
     return (
       <Center h="80vh" style={{ background: bgColor }}>
         <Loader size="xl" color={accentColor} />

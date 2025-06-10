@@ -48,12 +48,21 @@ class AuthService {
   private static instance: AuthService;
   private token: string | null = null;
   private user: User | null = null;
+  private initialized = false;
+  private interceptorsSetup = false;
 
   private constructor() {
     // Load token and user from cookies on initialization
     this.token = getCookie('token');
     const userData = getCookie('user');
     this.user = userData ? JSON.parse(decodeURIComponent(userData)) : null;
+
+    // Set axios headers immediately if we have a token
+    if (this.token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    this.initialized = true;
   }
 
   public static getInstance(): AuthService {
@@ -129,8 +138,18 @@ class AuthService {
     return !!this.token && !!this.user;
   }
 
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
   // Set up axios interceptor for token
   setupInterceptors(): void {
+    // Only setup interceptors once
+    if (this.interceptorsSetup) {
+      return;
+    }
+
+    // Ensure token is set in headers if available
     if (this.token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
     }
@@ -146,6 +165,8 @@ class AuthService {
         return Promise.reject(error);
       }
     );
+
+    this.interceptorsSetup = true;
   }
 }
 
