@@ -13,22 +13,33 @@ import {
 import { TestService } from '../services/test.service';
 import { Test } from '../models/test.model';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { InternalGuard } from '../auth/internal.guard';
 import { ApiOperation, ApiParam, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('tests')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
 export class TestController {
   constructor(private readonly testService: TestService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all tests for the authenticated user' })
   @ApiResponse({ status: 200, description: 'List of tests', type: [Test] })
   async getAllTests(@Request() req): Promise<Test[]> {
     return this.testService.getTestsByUser(req.user._id);
   }
 
+  @Get('internal/all')
+  @UseGuards(InternalGuard)
+  @ApiOperation({ summary: 'Get all tests (internal only)' })
+  @ApiResponse({ status: 200, description: 'List of all tests', type: [Test] })
+  async getAllTestsInternal(): Promise<Test[]> {
+    return this.testService.getAllTests();
+  }
+
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a test by ID' })
   @ApiParam({ name: 'id', description: 'The ID of the test' })
   @ApiResponse({ status: 200, description: 'The test', type: Test })
@@ -38,6 +49,8 @@ export class TestController {
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a test name and description' })
   @ApiParam({ name: 'id', description: 'The ID of the test to update' })
   @ApiResponse({ status: 200, description: 'Test updated successfully', type: Test })
@@ -60,6 +73,8 @@ export class TestController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a test by ID' })
   @ApiParam({ name: 'id', description: 'The ID of the test to delete' })
   @ApiResponse({ status: 204, description: 'Test deleted successfully' })

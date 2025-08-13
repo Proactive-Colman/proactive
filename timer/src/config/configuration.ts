@@ -9,6 +9,7 @@ export default () => ({
   auth: {
     username: process.env.TIMER_USERNAME || "",
     password: process.env.TIMER_PASSWORD || "",
+    internalSecret: process.env.INTERNAL_SECRET || "",
   },
   timer: {
     intervalMinutes: parseInt(

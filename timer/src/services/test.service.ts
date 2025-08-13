@@ -110,27 +110,24 @@ export class TestService {
     try {
       const backendUrl = this.configService.get<string>("backend.url");
       const performRequest = async (): Promise<Test[]> => {
-        const token = await this.getAuthToken();
-        try {
-          const response = await axios.get<Test[]>(`${backendUrl}/tests`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+        // Prefer internal route if INTERNAL_SECRET is configured
+        const internalSecret = this.configService.get<string>(
+          "auth.internalSecret"
+        );
+        if (internalSecret) {
+          const response = await axios.get<Test[]>(
+            `${backendUrl}/tests/internal/all`,
+            { headers: { "x-internal-secret": internalSecret } }
+          );
           return response.data;
-        } catch (err) {
-          if (err instanceof AxiosError && err.response?.status === 401) {
-            this.logger.warn(
-              "JWT rejected with 401. Refreshing token and retrying once..."
-            );
-            this.authToken = null;
-            const refreshedToken = await this.getAuthToken();
-            const retryResponse = await axios.get<Test[]>(
-              `${backendUrl}/tests`,
-              { headers: { Authorization: `Bearer ${refreshedToken}` } }
-            );
-            return retryResponse.data;
-          }
-          throw err;
         }
+
+        // Fallback to JWT if no internal secret configured
+        const token = await this.getAuthToken();
+        const response = await axios.get<Test[]>(`${backendUrl}/tests`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return response.data;
       };
       const data = await this.retry(() => performRequest());
       return data;
