@@ -8,7 +8,6 @@ export class TestService {
   private readonly logger = new Logger(TestService.name);
   private readonly maxRetries = 3;
   private readonly retryDelay = 5000; // 5 seconds
-  private authToken: string | null = null;
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -30,103 +29,24 @@ export class TestService {
     }
   }
 
-  private async getAuthToken(): Promise<string> {
-    if (this.authToken) {
-      return this.authToken;
-    }
-
-    const backendUrl = this.configService.get<string>("backend.url");
-    const username = this.configService.get<string>("auth.username");
-    const password = this.configService.get<string>("auth.password");
-
-    if (!username || !password) {
-      this.logger.error(
-        "Timer auth credentials are not configured (TIMER_USERNAME/TIMER_PASSWORD)"
-      );
-      throw new Error("Missing timer auth credentials");
-    }
-
-    const attemptLogin = async (): Promise<string> => {
-      const response = await axios.post<{ token: string }>(
-        `${backendUrl}/auth/login`,
-        { username, password }
-      );
-      const token = (response.data as any)?.token;
-      if (!token) {
-        throw new Error("Login succeeded but no token returned");
-      }
-      return token;
-    };
-
-    try {
-      const token = await attemptLogin();
-      this.authToken = token;
-      this.logger.log("Obtained JWT for timer service");
-      return token;
-    } catch (error) {
-      if (error instanceof AxiosError && error.response?.status === 401) {
-        this.logger.warn(
-          "Login failed with 401. Attempting signup then login..."
-        );
-        try {
-          await axios.post(`${backendUrl}/auth/signup`, { username, password });
-          const token = await attemptLogin();
-          this.authToken = token;
-          this.logger.log("Signed up and obtained JWT for timer service");
-          return token;
-        } catch (innerError) {
-          if (innerError instanceof AxiosError) {
-            this.logger.error(
-              `Failed to signup/login for timer: ${innerError.message} - ${
-                innerError.response?.data || "No response data"
-              }`
-            );
-          } else {
-            this.logger.error(
-              `Failed to signup/login for timer: ${
-                (innerError as any)?.message || innerError
-              }`
-            );
-          }
-          throw innerError;
-        }
-      }
-      if (error instanceof AxiosError) {
-        this.logger.error(
-          `Failed to login for timer: ${error.message} - ${
-            error.response?.data || "No response data"
-          }`
-        );
-      } else {
-        this.logger.error(
-          `Failed to login for timer: ${(error as any)?.message || error}`
-        );
-      }
-      throw error;
-    }
-  }
+  // Removed JWT login/signup; timer uses internal route secured by INTERNAL_SECRET
 
   async getAllTests(): Promise<Test[]> {
     try {
       const backendUrl = this.configService.get<string>("backend.url");
       const performRequest = async (): Promise<Test[]> => {
-        // Prefer internal route if INTERNAL_SECRET is configured
         const internalSecret = this.configService.get<string>(
           "auth.internalSecret"
         );
-        if (internalSecret) {
-          const response = await axios.get<Test[]>(
-            `${backendUrl}/tests/internal/all`,
-            { headers: { "x-internal-secret": internalSecret } }
+        if (!internalSecret) {
+          throw new Error(
+            "INTERNAL_SECRET is not configured for timer; cannot call internal API"
           );
-          return response.data;
         }
-
-        // Fallback to JWT if no internal secret configured
-        const token = await this.getAuthToken();
-        const response = await axios.get<Test[]>(`${backendUrl}/tests`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await axios.get<Test[]>(
+          `${backendUrl}/tests/internal/all`,
+          { headers: { "x-internal-secret": internalSecret } }
+        );
         return response.data;
       };
       const data = await this.retry(() => performRequest());
