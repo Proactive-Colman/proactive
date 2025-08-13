@@ -199,7 +199,9 @@ async def test_execution_loop():
             tests = response.json()
             
             for test in tests:
-                if test['status'] == 'pending':
+                # Treat missing status as 'pending' to ensure legacy tests run
+                test_status = test.get('status', 'pending')
+                if test_status == 'pending':
                     # Update status to running
                     requests.put(
                         f'{BACKEND_URL}/tests/internal/{test["_id"]}/status',
@@ -278,9 +280,10 @@ async def execute_specific_test(test_id: str):
         )
         
         # Update test status in backend
+        new_status = 'completed' if result.get('status') == 'completed' else 'failed'
         requests.put(
             f'{BACKEND_URL}/tests/internal/{test_id}/status',
-            json={'status': 'completed' if result['status'] == 'completed' else 'failed'},
+            json={'status': new_status},
             headers=headers
         )
         
