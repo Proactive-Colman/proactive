@@ -73,6 +73,7 @@ async def custom_swagger_ui_html():
 async def get_openapi_endpoint():
     return app.openapi()
 
+B2B_SECRET = os.getenv('INTERNAL_SECRET', '')
 BACKEND_URL = os.getenv('BACKEND_URL', 'http://backend:3000')
 RESULTS_URL = os.getenv('RESULTS_URL', 'http://results:3001')
 
@@ -193,15 +194,17 @@ async def test_execution_loop():
     while True:
         try:
             # Fetch all tests
-            response = requests.get(f'{BACKEND_URL}/tests')
+            headers = {'x-internal-secret': B2B_SECRET} if B2B_SECRET else {}
+            response = requests.get(f'{BACKEND_URL}/tests/internal/all', headers=headers)
             tests = response.json()
             
             for test in tests:
                 if test['status'] == 'pending':
                     # Update status to running
                     requests.put(
-                        f'{BACKEND_URL}/tests/{test["_id"]}/status',
-                        json={'status': 'running'}
+                        f'{BACKEND_URL}/tests/internal/{test["_id"]}/status',
+                        json={'status': 'running'},
+                        headers=headers
                     )
                     
                     # Execute the test
@@ -215,8 +218,9 @@ async def test_execution_loop():
                     
                     # Update test status in backend
                     requests.put(
-                        f'{BACKEND_URL}/tests/{test["_id"]}/status',
-                        json={'status': 'completed' if result['status'] == 'completed' else 'failed'}
+                        f'{BACKEND_URL}/tests/internal/{test["_id"]}/status',
+                        json={'status': 'completed' if result['status'] == 'completed' else 'failed'},
+                        headers=headers
                     )
             
             # Sleep for a bit before checking again
@@ -257,7 +261,8 @@ async def health_check():
 async def execute_specific_test(test_id: str):
     try:
         # Get test from backend
-        response = requests.get(f'{BACKEND_URL}/tests/{test_id}')
+        headers = {'x-internal-secret': B2B_SECRET} if B2B_SECRET else {}
+        response = requests.get(f'{BACKEND_URL}/tests/internal/{test_id}', headers=headers)
         if response.status_code == 404:
             raise HTTPException(status_code=404, detail="Test not found")
         
@@ -274,8 +279,9 @@ async def execute_specific_test(test_id: str):
         
         # Update test status in backend
         requests.put(
-            f'{BACKEND_URL}/tests/{test_id}/status',
-            json={'status': 'completed' if result['status'] == 'completed' else 'failed'}
+            f'{BACKEND_URL}/tests/internal/{test_id}/status',
+            json={'status': 'completed' if result['status'] == 'completed' else 'failed'},
+            headers=headers
         )
         
         return result

@@ -37,6 +37,33 @@ export class TestController {
     return this.testService.getAllTests();
   }
 
+  @Get('internal/:id')
+  @UseGuards(InternalGuard)
+  @ApiOperation({ summary: 'Get a test by ID (internal only)' })
+  @ApiParam({ name: 'id', description: 'The ID of the test' })
+  @ApiResponse({ status: 200, description: 'The test', type: Test })
+  @ApiResponse({ status: 404, description: 'Test not found' })
+  async getTestByIdInternal(@Param('id') id: string): Promise<Test> {
+    return this.testService.getTestById(id);
+  }
+
+  @Put('internal/:id/status')
+  @UseGuards(InternalGuard)
+  @ApiOperation({ summary: 'Update a test status (internal only)' })
+  @ApiParam({ name: 'id', description: 'The ID of the test to update' })
+  @ApiResponse({ status: 200, description: 'Test status updated', type: Test })
+  async updateTestStatusInternal(
+    @Param('id') id: string,
+    @Body() updateData: { status: string; executionTime?: number; error?: string },
+  ): Promise<Test | null> {
+    return this.testService.updateTestStatus(
+      id,
+      updateData.status,
+      updateData.executionTime,
+      updateData.error,
+    );
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
