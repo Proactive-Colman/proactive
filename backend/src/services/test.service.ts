@@ -27,59 +27,45 @@ export class TestService {
         messages: [
           {
             role: 'system',
-            content: `You are a helpful assistant that analyzes sequences of Selenium commands and combines them into logical steps.
-For each step, provide:
-1. A clear, concise name describing the specific action
-2. The list of commands that make up this step
+            content: `You are a helpful assistant that analyzes sequences of Selenium commands 
+            and combines them into logical steps. For each step, provide:
+            1. A clear, concise name describing the specific action
+            2. The list of commands that make up this step
 
-- Group all initialization commands (like driver.get, driver.set_window_size) into an "Initialization" step.
-- Group all cleanup commands (like driver.close, driver.quit) into a "Cleanup" or "Teardown" step.
-- For main test actions, use specific, natural language descriptions that include the exact values being used.
+            - Group all initialization commands (like driver.get, driver.set_window_size) into an "Initialization" step.
+            - Group all cleanup commands (like driver.close, driver.quit) into a "Cleanup" or "Teardown" step.
+            - For main test actions, use specific, natural language descriptions that include the exact values being used.
 
-Example input:
-[
-  "driver.get('https://www.youtube.com/')",
-  "driver.set_window_size(974, 1032)",
-  "driver.find_element(By.NAME, 'search_query').click()",
-  "driver.find_element(By.NAME, 'search_query').send_keys('nba')",
-  "driver.find_element(By.NAME, 'search_query').send_keys(Keys.ENTER)",
-  "WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'ytd-video-renderer')))",
-  "driver.find_element(By.CSS_SELECTOR, 'ytd-video-renderer').click()",
-  "driver.close()"
-]
+            Example input:
+            [ "driver.get('https://www.youtube.com/')",
+              "driver.set_window_size(974, 1032)",
+              "driver.find_element(By.NAME, 'search_query').click()",
+              "driver.find_element(By.NAME, 'search_query').send_keys('nba')",
+              "driver.find_element(By.NAME, 'search_query').send_keys(Keys.ENTER)",
+              "WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'ytd-video-renderer')))",
+              "driver.find_element(By.CSS_SELECTOR, 'ytd-video-renderer').click()",
+              "driver.close()" ]
 
-Example output:
-[
-  {
-    "name": "Initialization",
-    "commands": [
-      "driver.get('https://www.youtube.com/')",
-      "driver.set_window_size(974, 1032)"
-    ]
-  },
-  {
-    "name": "Search for 'nba'",
-    "commands": [
-      "driver.find_element(By.NAME, 'search_query').click()",
-      "driver.find_element(By.NAME, 'search_query').send_keys('nba')",
-      "driver.find_element(By.NAME, 'search_query').send_keys(Keys.ENTER)"
-    ]
-  },
-  {
-    "name": "Click first video",
-    "commands": [
-      "WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'ytd-video-renderer')))",
-      "driver.find_element(By.CSS_SELECTOR, 'ytd-video-renderer').click()"
-    ]
-  },
-  {
-    "name": "Cleanup",
-    "commands": [
-      "driver.close()"
-    ]
-  }
-]
-`,
+            Example output:
+            [
+              { "name": "Initialization", "commands": [
+                  "driver.get('https://www.youtube.com/')",
+                  "driver.set_window_size(974, 1032)"
+                ]
+              },
+              { "name": "Search for 'nba'", "commands": [
+                  "driver.find_element(By.NAME, 'search_query').click()",
+                  "driver.find_element(By.NAME, 'search_query').send_keys('nba')",
+                  "driver.find_element(By.NAME, 'search_query').send_keys(Keys.ENTER)"
+                ]
+              },
+              { "name": "Click first video", "commands": [
+                  "WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'ytd-video-renderer')))",
+                  "driver.find_element(By.CSS_SELECTOR, 'ytd-video-renderer').click()"
+                ]
+              },
+              { "name": "Cleanup", "commands": [ "driver.close()" ] }
+            ]`,
           },
           {
             role: 'user',
@@ -91,9 +77,7 @@ Example output:
       });
 
       if (!response.choices?.[0]?.message?.content) {
-        this.logger.warn(
-          'OpenAI response was empty, falling back to individual steps',
-        );
+        this.logger.warn('OpenAI response was empty, falling back to individual steps');
         return commands.map((cmd) => ({ name: cmd, commands: [cmd] }));
       }
 
@@ -101,9 +85,7 @@ Example output:
         const steps = JSON.parse(response.choices[0].message.content);
         return steps;
       } catch (parseError) {
-        this.logger.error(
-          `Failed to parse OpenAI response: ${parseError.message}`,
-        );
+        this.logger.error(`Failed to parse OpenAI response: ${parseError.message}`);
         return commands.map((cmd) => ({ name: cmd, commands: [cmd] }));
       }
     } catch (error) {
@@ -115,6 +97,7 @@ Example output:
   async processPythonFile(fileContent: string, userId: string): Promise<Test> {
     try {
       this.logger.log('Starting to process Python file');
+
       // Extract the URL from the Python file
       const urlMatch = fileContent.match(/self\.driver\.get\("([^"]+)"\)/);
       if (!urlMatch) {
@@ -128,49 +111,24 @@ Example output:
       let isInTestMethod = false;
 
       for (const line of lines) {
-        // Check if we're entering or leaving a test method
         if (line.includes('def test_')) {
           isInTestMethod = true;
           continue;
-        } else if (
-          line.includes('def setup_method') ||
-          line.includes('def teardown_method')
-        ) {
+        } else if (line.includes('def setup_method') || line.includes('def teardown_method')) {
           isInTestMethod = false;
           continue;
         }
 
-        // Only process driver commands if we're in a test method
         if (isInTestMethod) {
           const commandMatch = line.match(/self\.driver\.(.*)/);
           if (commandMatch) {
-            // Remove 'self.' prefix and add to commands
             const command = `driver.${commandMatch[1]}`;
             commands.push(command);
           }
         }
       }
 
-      // Add wait for search results after the search
-      const searchIndex = commands.findIndex((cmd) =>
-        cmd.includes('send_keys(Keys.ENTER)'),
-      );
-      if (searchIndex !== -1) {
-        commands.splice(
-          searchIndex + 1,
-          0,
-          'WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "ytd-video-renderer")))',
-        );
-      }
-
-      // Replace the specific video selector with a more reliable one
-      const videoIndex = commands.findIndex((cmd) =>
-        cmd.includes('ytd-item-section-renderer'),
-      );
-      if (videoIndex !== -1) {
-        commands[videoIndex] =
-          'driver.find_element(By.CSS_SELECTOR, "ytd-video-renderer").click()';
-      }
+      
 
       // Analyze and combine commands into logical steps
       const steps = await this.analyzeAndCombineSteps(commands);
@@ -203,12 +161,18 @@ Example output:
 
   async getTestById(id: string, userId?: string): Promise<Test> {
     this.logger.log(`Looking for test with ID: ${id}`);
-    const query = userId ? { _id: id, userId: new Types.ObjectId(userId) } : { _id: id };
+
+    const query = userId
+      ? { _id: id, userId: new Types.ObjectId(userId) }
+      : { _id: id };
+
     const test = await this.testModel.findOne(query).exec();
+
     if (!test) {
       this.logger.error(`Test not found with ID: ${id}`);
       throw new NotFoundException(`Test with ID ${id} not found`);
     }
+
     this.logger.log(`Found test: ${JSON.stringify(test)}`);
     return test;
   }
@@ -222,30 +186,31 @@ Example output:
     return this.testModel
       .findByIdAndUpdate(
         id,
-        {
-          status,
-          executionTime,
-          error,
-          lastRunAt: new Date(),
-        },
+        { status, executionTime, error, lastRunAt: new Date() },
         { new: true },
       )
       .exec();
   }
 
   async deleteTest(id: string, userId: string): Promise<boolean> {
-    const result = await this.testModel.findOneAndDelete({ 
-      _id: id, 
-      userId: new Types.ObjectId(userId) 
-    }).exec();
+    const result = await this.testModel
+      .findOneAndDelete({ _id: id, userId: new Types.ObjectId(userId) })
+      .exec();
     return !!result;
   }
 
-  async updateTestNameAndDescription(id: string, name: string, description: string, userId: string): Promise<Test | null> {
-    return this.testModel.findOneAndUpdate(
-      { _id: id, userId: new Types.ObjectId(userId) },
-      { name, description },
-      { new: true }
-    ).exec();
+  async updateTestNameAndDescription(
+    id: string,
+    name: string,
+    description: string,
+    userId: string,
+  ): Promise<Test | null> {
+    return this.testModel
+      .findOneAndUpdate(
+        { _id: id, userId: new Types.ObjectId(userId) },
+        { name, description },
+        { new: true },
+      )
+      .exec();
   }
 }

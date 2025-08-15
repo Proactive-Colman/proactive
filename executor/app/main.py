@@ -22,16 +22,19 @@ app = FastAPI(
     title="Proactive Test Executor",
     description="Service for executing automated tests using Selenium",
     version="1.0.0",
-    docs_url=None,  # Disable default docs
-    redoc_url=None  # Disable default redoc
+    docs_url=None,   # Disable default docs
+    redoc_url=None   # Disable default redoc
 )
 
-# Pydantic models for API documentation
+# ---------------------------
+# Pydantic models
+# ---------------------------
 class StepResult(BaseModel):
     name: str
     status: str
     duration: float
     error: Optional[str] = None
+
 
 class TestResult(BaseModel):
     testId: str
@@ -41,24 +44,29 @@ class TestResult(BaseModel):
     steps: List[StepResult]
     error: Optional[str] = None
 
-# Custom OpenAPI schema
+
+# ---------------------------
+# OpenAPI schema
+# ---------------------------
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
-    
     openapi_schema = get_openapi(
         title="Proactive Test Executor API",
         version="1.0.0",
         description="API for executing automated tests using Selenium",
         routes=app.routes,
     )
-    
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
+
 app.openapi = custom_openapi
 
-# Custom Swagger UI endpoint
+
+# ---------------------------
+# Swagger UI
+# ---------------------------
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():
     return get_swagger_ui_html(
@@ -68,29 +76,36 @@ async def custom_swagger_ui_html():
         swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css",
     )
 
-# OpenAPI JSON endpoint
+
 @app.get("/openapi.json", include_in_schema=False)
 async def get_openapi_endpoint():
     return app.openapi()
 
+
+# ---------------------------
+# Config
+# ---------------------------
 B2B_SECRET = os.getenv('INTERNAL_SECRET', '')
 BACKEND_URL = os.getenv('BACKEND_URL', 'http://backend:3000')
 RESULTS_URL = os.getenv('RESULTS_URL', 'http://results:3001')
 
+
+# ---------------------------
+# WebDriver setup
+# ---------------------------
 def setup_driver():
     options = webdriver.ChromeOptions()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    # Explicitly set the binary location for Chromium
-    options.binary_location = "/usr/bin/chromium"  # or "/usr/bin/chromium-browser" if needed
+    options.binary_location = "/usr/bin/chromium"  # Adjust if needed
+
     try:
         driver = webdriver.Chrome(
             service=Service("/usr/bin/chromedriver"),
             options=options
         )
     except Exception as e:
-        # Try fallback paths for chromedriver if the above fails
         try:
             driver = webdriver.Chrome(
                 service=Service("/usr/lib/chromium/chromedriver"),
@@ -103,13 +118,19 @@ def setup_driver():
                     options=options
                 )
             except Exception as e3:
-                raise RuntimeError(f"Failed to start Chromium WebDriver. Error 1: {e}. Error 2: {e2}. Error 3: {e3}")
+                raise RuntimeError(
+                    f"Failed to start Chromium WebDriver. "
+                    f"Error 1: {e}. Error 2: {e2}. Error 3: {e3}"
+                )
     return driver
 
+
+# ---------------------------
+# Command execution
+# ---------------------------
 def execute_command(driver, command):
     """Execute a single Selenium command and return its result."""
     try:
-        # Create a local context with the driver and By
         local_context = {
             'driver': driver,
             'By': By,
@@ -117,19 +138,21 @@ def execute_command(driver, command):
             'WebDriverWait': WebDriverWait,
             'EC': EC
         }
-        
-        # Execute the command in the local context
-        result = eval(command, {"__builtins__": {}}, local_context)
+        eval(command, {"__builtins__": {}}, local_context)
         return True
     except Exception as e:
         raise Exception(f"Failed to execute command '{command}': {str(e)}")
 
+
+# ---------------------------
+# Test execution
+# ---------------------------
 def execute_test(test):
     driver = None
     start_time = time.time()
     step_results = []
-    
-    # Initialize all steps with 'none' status
+
+    # Initialize step results
     for step in test['steps']:
         step_results.append({
             'name': step['name'],
@@ -137,18 +160,17 @@ def execute_test(test):
             'duration': 0,
             'error': None
         })
-    
+
     try:
         driver = setup_driver()
-        
-        # Execute each step
+
+        # Execute steps
         for i, step in enumerate(test['steps']):
             step_start_time = time.time()
             step_status = 'completed'
             step_error = None
-            
+
             try:
-                # Execute each command in the step
                 for command in step['commands']:
                     execute_command(driver, command)
             except Exception as e:
@@ -163,9 +185,10 @@ def execute_test(test):
                     'duration': step_duration,
                     'error': step_error
                 }
-        
+
         execution_time = time.time() - start_time
         total_runtime = sum(step['duration'] for step in step_results)
+
         return {
             'testId': test['_id'],
             'status': 'completed',
@@ -173,7 +196,7 @@ def execute_test(test):
             'totalRuntime': total_runtime,
             'steps': step_results
         }
-        
+
     except Exception as e:
         execution_time = time.time() - start_time
         total_runtime = sum(step['duration'] for step in step_results)
@@ -185,109 +208,64 @@ def execute_test(test):
             'error': str(e),
             'steps': step_results
         }
-        
     finally:
         if driver:
             driver.quit()
 
-async def test_execution_loop():
-    while True:
-        try:
-            # Fetch all tests
-            headers = {'x-internal-secret': B2B_SECRET} if B2B_SECRET else {}
-            response = requests.get(f'{BACKEND_URL}/tests/internal/all', headers=headers)
-            tests = response.json()
-            
-            for test in tests:
-                # Treat missing status as 'pending' to ensure legacy tests run
-                test_status = test.get('status', 'pending')
-                if test_status == 'pending':
-                    # Update status to running
-                    requests.put(
-                        f'{BACKEND_URL}/tests/internal/{test["_id"]}/status',
-                        json={'status': 'running'},
-                        headers=headers
-                    )
-                    
-                    # Execute the test
-                    result = execute_test(test)
-                    
-                    # Send result to results service
-                    requests.post(
-                        f'{RESULTS_URL}/test-results',
-                        json=result
-                    )
-                    
-                    # Update test status in backend
-                    requests.put(
-                        f'{BACKEND_URL}/tests/internal/{test["_id"]}/status',
-                        json={'status': 'completed' if result['status'] == 'completed' else 'failed'},
-                        headers=headers
-                    )
-            
-            # Sleep for a bit before checking again
-            await asyncio.sleep(5)
-            
-        except Exception as e:
-            print(f"Error in test execution loop: {str(e)}")
-            await asyncio.sleep(5)
 
+# ---------------------------
+# Startup / Health
+# ---------------------------
 @app.on_event("startup")
 async def startup_event():
-    # Start the test execution loop in a separate thread
-    threading.Thread(target=lambda: asyncio.run(test_execution_loop()), daemon=True).start()
+    # Disabled loop thread for now
+    # threading.Thread(target=lambda: asyncio.run(test_execution_loop()), daemon=True).start()
+    pass
 
-@app.get("/health", 
-    summary="Health Check",
-    description="Check if the executor service is healthy",
-    response_model=dict)
+
+@app.get("/health", summary="Health Check", description="Check if the executor service is healthy", response_model=dict)
 async def health_check():
     return {"status": "healthy"}
 
-@app.post("/execute/{test_id}",
+
+# ---------------------------
+# API: Execute Test
+# ---------------------------
+@app.post(
+    "/execute/{test_id}",
     summary="Execute Test",
     description="Execute a specific test by its ID",
     response_model=TestResult,
     responses={
-        200: {
-            "description": "Test execution completed",
-            "model": TestResult
-        },
-        404: {
-            "description": "Test not found"
-        },
-        500: {
-            "description": "Internal server error"
-        }
-    })
+        200: {"description": "Test execution completed", "model": TestResult},
+        404: {"description": "Test not found"},
+        500: {"description": "Internal server error"},
+    }
+)
 async def execute_specific_test(test_id: str):
     try:
-        # Get test from backend
         headers = {'x-internal-secret': B2B_SECRET} if B2B_SECRET else {}
         response = requests.get(f'{BACKEND_URL}/tests/internal/{test_id}', headers=headers)
+
         if response.status_code == 404:
             raise HTTPException(status_code=404, detail="Test not found")
-        
+
         test = response.json()
-        
-        # Execute the test
+
+        # Run test
         result = execute_test(test)
-        
-        # Send result to results service
-        requests.post(
-            f'{RESULTS_URL}/test-results',
-            json=result
-        )
-        
-        # Update test status in backend
+
+        # Send results to results service
+        requests.post(f'{RESULTS_URL}/test-results', json=result)
+
+        # Update status in backend
         new_status = 'completed' if result.get('status') == 'completed' else 'failed'
         requests.put(
             f'{BACKEND_URL}/tests/internal/{test_id}/status',
             json={'status': new_status},
             headers=headers
         )
-        
+
         return result
-        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
