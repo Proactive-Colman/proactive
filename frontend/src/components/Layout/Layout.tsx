@@ -132,10 +132,6 @@ export function Layout() {
             </Paper>
           </Group>
           <Group gap="md">
-            <ActionIcon variant="light" color="teal" size="lg">
-              <IconBell size={22} />
-            </ActionIcon>
-
             {/* Profile Dropdown */}
             <Menu shadow="md" width={200} position="bottom-end">
               <Menu.Target>

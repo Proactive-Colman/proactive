@@ -23,6 +23,10 @@ import {
   IconUpload,
   IconX,
   IconCircleCheck,
+  IconBrandEdge,
+  IconBrandFirefox,
+  IconBrandChrome,
+  IconHelp,
 } from '@tabler/icons-react';
 import { testService, Test } from '@/services/test.service';
 import { Dropzone } from '@mantine/dropzone';
@@ -72,6 +76,7 @@ export function Tests() {
     file?: string;
   }>({});
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
 
   const validateForm = () => {
     const errors: typeof formErrors = {};
@@ -201,22 +206,40 @@ export function Tests() {
           <Title order={1} style={{ color: textColor, fontWeight: 800, letterSpacing: -1 }}>
             Test Management
           </Title>
-          <Button
-            leftSection={<IconPlus size={18} />}
-            onClick={handleCreateTest}
-            variant="filled"
-            color={accentColor}
-            style={{
-              background: accentColor,
-              color: '#fff',
-              fontWeight: 600,
-              fontSize: 18,
-              borderRadius: 12,
-              boxShadow: '0 2px 8px 0 rgba(32,201,151,0.10)',
-            }}
-          >
-            Create Test
-          </Button>
+          <Group gap="xs" align="center" justify="flex-end">
+            <Button
+              leftSection={<IconHelp size={18} />}
+              onClick={() => setHelpModalOpen(true)}
+              variant="outline"
+              color={accentColor}
+              style={{
+                background: '#fff',
+                color: accentColor,
+                fontWeight: 600,
+                fontSize: 18,
+                borderRadius: 12,
+                boxShadow: '0 2px 8px 0 rgba(32,201,151,0.10)',
+              }}
+            >
+              Help
+            </Button>
+            <Button
+              leftSection={<IconPlus size={18} />}
+              onClick={handleCreateTest}
+              variant="filled"
+              color={accentColor}
+              style={{
+                background: accentColor,
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: 18,
+                borderRadius: 12,
+                boxShadow: '0 2px 8px 0 rgba(32,201,151,0.10)',
+              }}
+            >
+              Create Test
+            </Button>
+          </Group>
         </Group>
 
         <Grid gutter="lg">
@@ -471,6 +494,91 @@ export function Tests() {
               </Button>
             </Stack>
           </div>
+        </Modal>
+
+        <Modal
+          opened={helpModalOpen}
+          onClose={() => setHelpModalOpen(false)}
+          title="Selenium IDE Setup Guide"
+          size="lg"
+          closeOnClickOutside={true}
+          closeOnEscape={true}
+          styles={{
+            header: { background: cardBg },
+            body: { background: bgColor },
+            title: { color: textColor, fontWeight: 700 },
+          }}
+        >
+          <Stack>
+            <Text size="md" style={{ color: textColor }}>
+              To get started with Selenium IDE, please install the browser extension for your
+              preferred browser.
+            </Text>
+            <Group justify="center" gap="xl">
+              <Button
+                leftSection={<IconBrandEdge size={24} color="#0078D7" />}
+                variant="outline"
+                color={accentColor}
+                style={{ borderColor: accentColor, color: textColor }}
+                onClick={() =>
+                  window.open(
+                    'microsoft-edge:https://microsoftedge.microsoft.com/addons/detail/selenium-ide/ajdpfmkffanmkhejnopjppegokpogffp',
+                    '_blank'
+                  )
+                }
+              >
+                Install for Edge
+              </Button>
+              <Button
+                leftSection={<IconBrandFirefox size={24} color="#FF7139" />}
+                variant="outline"
+                color={accentColor}
+                style={{ borderColor: accentColor, color: textColor }}
+                onClick={() =>
+                  window.open(
+                    'firefox:https://addons.mozilla.org/en-US/firefox/addon/selenium-ide',
+                    '_blank'
+                  )
+                }
+              >
+                Install for Firefox
+              </Button>
+              <Button
+                leftSection={
+                  <IconBrandChrome
+                    size={24}
+                    color="#4285F4"
+                    style={{ filter: 'grayscale(100%)' }}
+                  />
+                }
+                variant="outline"
+                color={dimmedColor}
+                style={{ borderColor: dimmedColor, color: dimmedColor }}
+                disabled
+              >
+                Chrome Coming Soon...
+              </Button>
+            </Group>
+            <Text size="sm" style={{ color: dimmedColor, textAlign: 'center' }}>
+              Please open the links in the respective browsers.
+            </Text>
+            <div style={{ marginTop: 20, textAlign: 'center' }}>
+              <Text size="lg" style={{ color: textColor, fontWeight: 700 }}>
+                Test Creation Guide
+              </Text>
+              <div
+                style={{
+                  width: '100%',
+                  borderRadius: 8,
+                }}
+              >
+                <video width="100%" controls style={{ borderRadius: 8 }}>
+                  <source src="/videos/guide.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </div>
+          </Stack>
         </Modal>
       </Stack>
     </Container>
